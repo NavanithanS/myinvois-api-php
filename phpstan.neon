@@ -1,0 +1,13 @@
+parameters:
+    level: 8
+    paths:
+        - src
+        - tests
+    excludePaths:
+        - tests/Fixtures
+    ignoreErrors:
+        - '#Unsafe usage of new static#'
+    treatPhpDocTypesAsCertain: false
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
+    inferPrivatePropertyTypeFromConstructor: true
