@@ -231,7 +231,7 @@ composer format
 
 ## Security
 
-If you discover any security vulnerabilities, please email security@example.com instead of using the issue tracker.
+If you discover any security vulnerabilities, please email gua@navins.biz instead of using the issue tracker.
 
 ## License
 
@@ -239,5 +239,4 @@ This library is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Credits
 
--   [Author Name](https://github.com/author)
--   [All Contributors](../../contributors)
+[All Contributors](../../contributors)
