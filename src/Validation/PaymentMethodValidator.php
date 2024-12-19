@@ -48,11 +48,11 @@ class PaymentMethodValidator
     {
         $code = $this->normalizeCode($code);
 
-        if (! isset(self::PAYMENT_METHODS[$code])) {
+        if (!isset(self::PAYMENT_METHODS[$code])) {
             throw new ValidationException(
                 'Invalid payment method code',
                 ['payment_method' => [
-                    'Code must be one of: '.implode(', ', array_keys(self::PAYMENT_METHODS)),
+                    'Code must be one of: ' . implode(', ', array_keys(self::PAYMENT_METHODS)),
                 ]]
             );
         }
@@ -278,10 +278,4 @@ class PaymentMethodValidator
         // Ensure 2-digit format with leading zero
         return str_pad($code, 2, '0', STR_PAD_LEFT);
     }
-}
-
-try {
-    $result = $this->client->validateTaxpayerTin('C1234567890', 'NRIC', '770625015324');
-} catch (ValidationException $e) {
-    // Handle validation errors
 }
