@@ -5,11 +5,12 @@ namespace Nava\MyInvois\Enums;
 /**
  * Represents the possible notification statuses in the MyInvois system.
  */
-enum NotificationStatusEnum: int {
+enum NotificationStatusEnum: int
+{
     /**
      * Newly created notification
      */
-    case NEW  = 1;
+    case NEW = 1;
 
     /**
      * Notification pending delivery
@@ -52,7 +53,7 @@ enum NotificationStatusEnum: int {
      */
     public static function getCodes(): array
     {
-        return array_map(fn($case) => $case->value, self::cases());
+        return array_map(fn ($case) => $case->value, self::cases());
     }
 
     /**
@@ -103,7 +104,7 @@ enum NotificationStatusEnum: int {
      */
     public function isSuccessful(): bool
     {
-        return self::DELIVERED === $this;
+        return $this === self::DELIVERED;
     }
 
     /**
@@ -111,7 +112,7 @@ enum NotificationStatusEnum: int {
      */
     public function isError(): bool
     {
-        return self::ERROR === $this;
+        return $this === self::ERROR;
     }
 
     /**
@@ -119,7 +120,7 @@ enum NotificationStatusEnum: int {
      */
     public function isInProgress(): bool
     {
-        return in_array($this, [self::NEW , self::PENDING, self::BATCHED], true);
+        return in_array($this, [self::NEW, self::PENDING, self::BATCHED], true);
     }
 
     /**

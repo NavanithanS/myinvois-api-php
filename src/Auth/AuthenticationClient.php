@@ -20,19 +20,31 @@ class AuthenticationClient implements AuthenticationClientInterface
     use LoggerTrait;
 
     protected const TOKEN_ENDPOINT = '/connect/token';
+
     protected const DEFAULT_SCOPE = 'InvoicingAPI';
+
     protected const TOKEN_CACHE_PREFIX = 'myinvois_token_';
+
     protected const TOKEN_REFRESH_BUFFER = 300; // 5 minutes before expiry
+
     private const MAX_TOKEN_REQUESTS = 100; // Per hour
+
     private const RATE_LIMIT_WINDOW = 3600;
 
     protected ?string $currentToken = null;
+
     protected ?int $tokenExpires = null;
+
     protected readonly string $clientId;
+
     protected readonly string $clientSecret;
+
     protected readonly string $baseUrl;
+
     protected readonly GuzzleClient $httpClient;
+
     protected readonly CacheRepository $cache;
+
     protected readonly array $config;
 
     public function __construct(
@@ -80,6 +92,7 @@ class AuthenticationClient implements AuthenticationClientInterface
                 $cached = $this->getTokenFromCache();
                 if ($cached) {
                     $this->logDebug('Using cached token');
+
                     return $cached;
                 }
             }
@@ -120,7 +133,7 @@ class AuthenticationClient implements AuthenticationClientInterface
                 ],
                 'form_params' => [
                     'grant_type' => 'client_credentials',
-                    'client_id' => substr($this->clientId, 0, 5) . '...',
+                    'client_id' => substr($this->clientId, 0, 5).'...',
                     'scope' => self::DEFAULT_SCOPE,
                 ],
                 'connect_timeout' => $this->config['http']['connect_timeout'],
@@ -191,11 +204,11 @@ class AuthenticationClient implements AuthenticationClientInterface
                     'raw_body' => $body,
                 ]);
                 throw new AuthenticationException(
-                    'Invalid response format: ' . json_last_error_msg()
+                    'Invalid response format: '.json_last_error_msg()
                 );
             }
 
-            if (!isset($data['access_token'])) {
+            if (! isset($data['access_token'])) {
                 $this->logError('Invalid auth response structure', [
                     'received_keys' => array_keys($data),
                     'raw_response' => $body,
@@ -222,7 +235,7 @@ class AuthenticationClient implements AuthenticationClientInterface
         $context = [
             'error_class' => get_class($e),
             'error_code' => $e->getCode(),
-            'client_id' => substr($this->clientId, 0, 5) . '...',
+            'client_id' => substr($this->clientId, 0, 5).'...',
             'base_url' => $this->baseUrl,
         ];
 
@@ -240,38 +253,38 @@ class AuthenticationClient implements AuthenticationClientInterface
 
                 return match ($response->getStatusCode()) {
                     400 => new ValidationException(
-                        'Invalid request format or parameters: ' . $errorMessage,
+                        'Invalid request format or parameters: '.$errorMessage,
                         ['auth' => [$errorMessage]],
                         400,
                         $e
                     ),
                     401 => new AuthenticationException(
-                        'Invalid credentials or expired token: ' . $errorMessage,
+                        'Invalid credentials or expired token: '.$errorMessage,
                         401,
                         $e
                     ),
                     403 => new AuthenticationException(
-                        'Access denied - check permissions: ' . $errorMessage,
+                        'Access denied - check permissions: '.$errorMessage,
                         403,
                         $e
                     ),
                     404 => new AuthenticationException(
-                        'Authentication endpoint not found - check URL: ' . $errorMessage,
+                        'Authentication endpoint not found - check URL: '.$errorMessage,
                         404,
                         $e
                     ),
                     429 => new AuthenticationException(
-                        'Rate limit exceeded: ' . $errorMessage,
+                        'Rate limit exceeded: '.$errorMessage,
                         429,
                         $e
                     ),
                     500 => new AuthenticationException(
-                        'Server error during authentication: ' . $errorMessage,
+                        'Server error during authentication: '.$errorMessage,
                         500,
                         $e
                     ),
                     default => new AuthenticationException(
-                        'Authentication failed: ' . $errorMessage,
+                        'Authentication failed: '.$errorMessage,
                         $response->getStatusCode(),
                         $e
                     )
@@ -282,7 +295,7 @@ class AuthenticationClient implements AuthenticationClientInterface
             }
         } else {
             return new NetworkException(
-                'Network error during authentication: ' . $e->getMessage(),
+                'Network error during authentication: '.$e->getMessage(),
                 0,
                 $e
             );
@@ -291,7 +304,7 @@ class AuthenticationClient implements AuthenticationClientInterface
         $this->logError('Authentication error occurred', $context);
 
         return new AuthenticationException(
-            'Authentication failed: ' . $e->getMessage(),
+            'Authentication failed: '.$e->getMessage(),
             $e->getCode(),
             $e
         );
@@ -305,6 +318,7 @@ class AuthenticationClient implements AuthenticationClientInterface
 
         if ($cached = $this->getTokenFromCache()) {
             $this->updateCurrentToken($cached);
+
             return true;
         }
 
@@ -313,7 +327,7 @@ class AuthenticationClient implements AuthenticationClientInterface
 
     public function getAccessToken(): string
     {
-        if (!$this->hasValidToken()) {
+        if (! $this->hasValidToken()) {
             $data = $this->authenticate();
             $this->updateCurrentToken($data);
         }
@@ -323,7 +337,7 @@ class AuthenticationClient implements AuthenticationClientInterface
 
     protected function getTokenUrl(): string
     {
-        return rtrim($this->baseUrl, '/') . self::TOKEN_ENDPOINT;
+        return rtrim($this->baseUrl, '/').self::TOKEN_ENDPOINT;
     }
 
     protected function shouldUseCache(): bool
@@ -359,7 +373,7 @@ class AuthenticationClient implements AuthenticationClientInterface
 
     protected function getCacheKey(): string
     {
-        return self::TOKEN_CACHE_PREFIX . $this->clientId;
+        return self::TOKEN_CACHE_PREFIX.$this->clientId;
     }
 
     protected function clearCurrentToken(): void
@@ -375,24 +389,25 @@ class AuthenticationClient implements AuthenticationClientInterface
     /**
      * Validate authentication response data.
      *
-     * @param array $data Response data to validate
+     * @param  array  $data  Response data to validate
+     *
      * @throws AuthenticationException If response is invalid
      */
     protected function validateAuthResponse(array $data): void
     {
-        if (!isset($data['access_token'])) {
+        if (! isset($data['access_token'])) {
             throw new AuthenticationException(
                 'Invalid authentication response: missing access_token'
             );
         }
 
-        if (!isset($data['token_type']) || strtolower($data['token_type']) !== 'bearer') {
+        if (! isset($data['token_type']) || strtolower($data['token_type']) !== 'bearer') {
             throw new AuthenticationException(
                 'Invalid authentication response: invalid token_type'
             );
         }
 
-        if (!isset($data['expires_in'])) {
+        if (! isset($data['expires_in'])) {
             throw new AuthenticationException(
                 'Invalid authentication response: missing expires_in'
             );
@@ -402,7 +417,7 @@ class AuthenticationClient implements AuthenticationClientInterface
         if (isset($data['scope'])) {
             $requiredScope = Config::DEFAULT_SCOPE;
             $grantedScopes = explode(' ', $data['scope']);
-            if (!in_array($requiredScope, $grantedScopes, true)) {
+            if (! in_array($requiredScope, $grantedScopes, true)) {
                 throw new AuthenticationException(
                     sprintf('Required scope "%s" was not granted', $requiredScope)
                 );

@@ -76,7 +76,7 @@ class WorkflowParameterTest extends TestCase
     /** @test */
     public function it_correctly_determines_active_status(): void
     {
-        $now = new DateTimeImmutable();
+        $now = new DateTimeImmutable;
         $past = $now->modify('-1 year');
         $future = $now->modify('+1 year');
 

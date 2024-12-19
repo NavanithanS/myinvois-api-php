@@ -18,10 +18,6 @@ interface AuthenticationClientInterface
      * an access token from the MyInvois identity service. If caching is enabled,
      * it will first check for a valid cached token before making an API request.
      *
-     * @throws AuthenticationException If authentication fails due to invalid credentials
-     * @throws ValidationException If the request or response validation fails
-     * @throws NetworkException If a network error occurs
-     *
      * @return array{
      *     access_token: string,
      *     token_type: string,
@@ -29,6 +25,10 @@ interface AuthenticationClientInterface
      *     scope: string,
      *     created_at?: int
      * } The token data including expiration information
+     *
+     * @throws AuthenticationException If authentication fails due to invalid credentials
+     * @throws ValidationException If the request or response validation fails
+     * @throws NetworkException If a network error occurs
      */
     public function authenticate(): array;
 
@@ -48,11 +48,11 @@ interface AuthenticationClientInterface
      * This method is the primary way to obtain a valid access token. It handles
      * checking for existing valid tokens and refreshing expired ones automatically.
      *
+     * @return string A valid access token
+     *
      * @throws AuthenticationException If authentication fails when getting a new token
      * @throws ValidationException If token validation fails
      * @throws NetworkException If a network error occurs during token refresh
-     *
-     * @return string A valid access token
      */
     public function getAccessToken(): string;
 }

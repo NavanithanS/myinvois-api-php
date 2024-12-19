@@ -11,6 +11,7 @@ use Psr\Log\LoggerInterface;
 class SubmissionStatusApiTest extends TestCase
 {
     private string $validSubmissionId = 'HJSD135P2S7D8IU';
+
     private array $successResponse;
 
     protected function setUp(): void
@@ -97,7 +98,7 @@ class SubmissionStatusApiTest extends TestCase
         foreach ($invalidIds as $id) {
             try {
                 $this->client->getSubmissionStatus($id);
-                $this->fail('Expected ValidationException for invalid submission ID: ' . $id);
+                $this->fail('Expected ValidationException for invalid submission ID: '.$id);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid submission ID format', $e->getMessage());
             }

@@ -5,7 +5,8 @@ namespace Nava\MyInvois\Enums;
 /**
  * Represents the possible document types in the MyInvois system.
  */
-enum DocumentTypeEnum: int {
+enum DocumentTypeEnum: int
+{
     /**
      * Regular Invoice
      */
@@ -40,7 +41,7 @@ enum DocumentTypeEnum: int {
      */
     public static function getCodes(): array
     {
-        return array_map(fn($case) => $case->value, self::cases());
+        return array_map(fn ($case) => $case->value, self::cases());
     }
 
     /**

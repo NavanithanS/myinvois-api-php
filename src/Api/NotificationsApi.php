@@ -18,7 +18,8 @@ trait NotificationsApi
     /**
      * Get notifications with optional filtering.
      *
-     * @param array $filters Optional filters for notifications
+     * @param  array  $filters  Optional filters for notifications
+     *
      *     @option DateTimeInterface|string $dateFrom Start date for notifications
      *     @option DateTimeInterface|string $dateTo End date for notifications
      *     @option int $type Type of notifications (see NotificationTypeEnum)
@@ -26,10 +27,12 @@ trait NotificationsApi
      *     @option int $status Status of notifications (see NotificationStatusEnum)
      *     @option int $pageNo Page number for pagination
      *     @option int $pageSize Number of items per page (max 100)
+     *
      * @return array{
      *     result: array,
      *     metadata: array{hasNext: bool}
      * }
+     *
      * @throws ApiException|ValidationException
      */
     public function getNotifications(array $filters = []): array
@@ -45,7 +48,7 @@ trait NotificationsApi
                 ['query' => $query]
             );
 
-            if (!isset($response['result']) || !isset($response['metadata'])) {
+            if (! isset($response['result']) || ! isset($response['metadata'])) {
                 throw new ApiException('Invalid response format from notifications endpoint');
             }
 
@@ -68,7 +71,8 @@ trait NotificationsApi
     /**
      * Validate notification filter parameters.
      *
-     * @param array $filters Filter parameters to validate
+     * @param  array  $filters  Filter parameters to validate
+     *
      * @throws ValidationException
      */
     private function validateNotificationFilters(array $filters): void
@@ -119,7 +123,7 @@ trait NotificationsApi
     /**
      * Prepare notification filter parameters for the API request.
      *
-     * @param array $filters Raw filter parameters
+     * @param  array  $filters  Raw filter parameters
      * @return array Prepared query parameters
      */
     private function prepareNotificationFilters(array $filters): array

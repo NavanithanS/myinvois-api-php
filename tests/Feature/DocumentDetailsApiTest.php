@@ -11,6 +11,7 @@ use Psr\Log\LoggerInterface;
 class DocumentDetailsApiTest extends TestCase
 {
     private string $validUuid = 'F9D425P6DS7D8IU';
+
     private array $validResponse;
 
     protected function setUp(): void
@@ -100,7 +101,7 @@ class DocumentDetailsApiTest extends TestCase
         foreach ($invalidUuids as $uuid) {
             try {
                 $this->client->getDocumentDetails($uuid);
-                $this->fail('Expected ValidationException for invalid UUID: ' . $uuid);
+                $this->fail('Expected ValidationException for invalid UUID: '.$uuid);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid UUID format', $e->getMessage());
             }
@@ -224,7 +225,7 @@ class DocumentDetailsApiTest extends TestCase
         foreach ($invalidLongIds as $longId) {
             try {
                 $this->client->generateDocumentPublicUrl($this->validUuid, $longId);
-                $this->fail('Expected ValidationException for invalid long ID: ' . $longId);
+                $this->fail('Expected ValidationException for invalid long ID: '.$longId);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid long ID format', $e->getMessage());
             }

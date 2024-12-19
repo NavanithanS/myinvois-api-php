@@ -36,38 +36,40 @@ use Webmozart\Assert\Assert;
  * - Validation and error handling
  * - Rate limiting and retry logic
  *
- * @package Nava\MyInvois
  * @author Nava
  * @license MIT
  */
-
 class MyInvoisClient
 {
-
     private readonly ApiClient $apiClient;
+
     private readonly string $clientId;
+
     private readonly array $config;
+
     private readonly CacheRepository $cache;
 
-    use LoggerTrait;
     use DateValidationTrait;
+    use DocumentDetailsApi;
+    use DocumentRejectionApi;
+    use DocumentRetrievalApi;
+    use DocumentSearchApi;
+    use DocumentSubmissionApi;
+    use DocumentTypesApi;
+    use DocumentTypeVersionsApi;
+    use LoggerTrait;
+    use NotificationsApi;
+    use RecentDocumentsApi;
+    use SubmissionStatusApi;
+    use TaxpayerApi;
     use UuidValidationTrait;
 
-    use DocumentDetailsApi;
-    use DocumentRetrievalApi;
-    use TaxpayerApi;
-    use SubmissionStatusApi;
-    use RecentDocumentsApi;
-    use NotificationsApi;
-    use DocumentTypeVersionsApi;
-    use DocumentTypesApi;
-    use DocumentSubmissionApi;
-    use DocumentSearchApi;
-    use DocumentRejectionApi;
-
     public const PRODUCTION_URL = 'https://myinvois.hasil.gov.my';
+
     public const SANDBOX_URL = 'https://preprod.myinvois.hasil.gov.my';
+
     public const IDENTITY_PRODUCTION_URL = 'https://api.myinvois.hasil.gov.my/connect/token';
+
     public const IDENTITY_SANDBOX_URL = 'https://preprod-api.myinvois.hasil.gov.my/connect/token';
 
     public function __construct(
@@ -132,15 +134,16 @@ class MyInvoisClient
     /**
      * Submit a new invoice document.
      *
-     * @param array $invoice Invoice data following MyInvois schema
+     * @param  array  $invoice  Invoice data following MyInvois schema
      * @return array Response containing the document ID and status
+     *
      * @throws ValidationException|ApiException
      */
     public function submitInvoice(array $invoice): array
     {
         $this->validateInvoiceData($invoice);
 
-        $preparer = new InvoiceDataPreparer();
+        $preparer = new InvoiceDataPreparer;
         $preparedInvoice = $preparer->prepare($invoice);
 
         return $this->apiClient->request('POST', '/documents', [
@@ -151,8 +154,9 @@ class MyInvoisClient
     /**
      * Get the status of a document.
      *
-     * @param string $documentId The document ID
+     * @param  string  $documentId  The document ID
      * @return array Document status and details
+     *
      * @throws ApiException
      */
     public function getDocumentStatus(string $documentId): array
@@ -167,18 +171,21 @@ class MyInvoisClient
     /**
      * List documents with optional filtering.
      *
-     * @param array $filters Optional filters
+     * @param  array  $filters  Optional filters
+     *
      *     @option string $startDate Start date (YYYY-MM-DD)
      *     @option string $endDate End date (YYYY-MM-DD)
      *     @option string $status Document status
      *     @option int $page Page number
      *     @option int $perPage Items per page
+     *
      * @return array Paginated list of documents
+     *
      * @throws ApiException
      */
     public function listDocuments(array $filters = []): array
     {
-        $preparer = new DocumentFilterPreparer();
+        $preparer = new DocumentFilterPreparer;
         $preparedFilters = $preparer->prepare($filters);
 
         return $this->apiClient->request('GET', '/documents', [
@@ -189,9 +196,10 @@ class MyInvoisClient
     /**
      * Cancel a document.
      *
-     * @param string $documentId The document ID to cancel
-     * @param string $reason Reason for cancellation
+     * @param  string  $documentId  The document ID to cancel
+     * @param  string  $reason  Reason for cancellation
      * @return array Cancellation status
+     *
      * @throws ApiException
      */
     public function cancelDocument(string $documentId, string $reason): array
@@ -206,8 +214,9 @@ class MyInvoisClient
     /**
      * Get document PDF.
      *
-     * @param string $documentId The document ID
+     * @param  string  $documentId  The document ID
      * @return string Binary PDF content
+     *
      * @throws ApiException
      */
     public function getDocumentPdf(string $documentId): string
@@ -224,8 +233,9 @@ class MyInvoisClient
     /**
      * Get document events history.
      *
-     * @param string $documentId The document ID
+     * @param  string  $documentId  The document ID
      * @return array List of document events
+     *
      * @throws ApiException
      */
     public function getDocumentHistory(string $documentId): array
@@ -236,8 +246,9 @@ class MyInvoisClient
     /**
      * Validate invoice data without submitting.
      *
-     * @param array $invoice Invoice data to validate
+     * @param  array  $invoice  Invoice data to validate
      * @return array Validation results
+     *
      * @throws ApiException
      */
     public function validateInvoice(array $invoice): array
@@ -251,6 +262,7 @@ class MyInvoisClient
      * Get current API status and service health.
      *
      * @return array API status information
+     *
      * @throws ApiException
      */
     public function getApiStatus(): array
@@ -298,7 +310,7 @@ class MyInvoisClient
     /**
      * Prepare filters for listing documents.
      *
-     * @param array $filters Raw filters
+     * @param  array  $filters  Raw filters
      * @return array Prepared filters
      */
     private function prepareListFilters(array $filters): array
@@ -324,13 +336,13 @@ class MyInvoisClient
         return $prepared;
     }
 
-    public function submitDebitNote(array $document, string $version = null): array
+    public function submitDebitNote(array $document, ?string $version = null): array
     {
         // Use provided version or fallback to current version
         $version = $version ?? Config::DEBIT_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (!in_array($version, Config::DEBIT_NOTE_SUPPORTED_VERSIONS)) {
+        if (! in_array($version, Config::DEBIT_NOTE_SUPPORTED_VERSIONS)) {
             throw new ValidationException('Unsupported debit note version');
         }
 
@@ -347,9 +359,10 @@ class MyInvoisClient
     /**
      * Submit a refund note document.
      *
-     * @param array $document Refund note data following MyInvois schema
-     * @param ?string $version Version to use (defaults to current version)
+     * @param  array  $document  Refund note data following MyInvois schema
+     * @param  ?string  $version  Version to use (defaults to current version)
      * @return array Submission response
+     *
      * @throws ValidationException|ApiException
      */
     public function submitRefundNote(array $document, ?string $version = null): array
@@ -358,7 +371,7 @@ class MyInvoisClient
         $version = $version ?? Config::REFUND_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (!Config::isVersionSupported('refund_note', $version)) {
+        if (! Config::isVersionSupported('refund_note', $version)) {
             throw new ValidationException('Unsupported refund note version');
         }
 

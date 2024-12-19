@@ -40,9 +40,10 @@ class MsicValidator
     /**
      * Validate a MSIC code.
      *
-     * @param string $code The MSIC code to validate
-     * @throws ValidationException If the code is invalid
+     * @param  string  $code  The MSIC code to validate
      * @return bool True if valid
+     *
+     * @throws ValidationException If the code is invalid
      */
     public function validate(string $code): bool
     {
@@ -50,12 +51,12 @@ class MsicValidator
         $code = trim($code);
 
         // Check special case for "Not Applicable"
-        if (self::NOT_APPLICABLE === $code) {
+        if ($code === self::NOT_APPLICABLE) {
             return true;
         }
 
         // Basic format validation
-        if (!preg_match('/^\d{5}$/', $code)) {
+        if (! preg_match('/^\d{5}$/', $code)) {
             throw new ValidationException(
                 'Invalid MSIC code format',
                 ['msic' => ['MSIC code must be exactly 5 digits']]
@@ -77,15 +78,16 @@ class MsicValidator
     /**
      * Get the section letter for a given MSIC code.
      *
-     * @param string $code The MSIC code
+     * @param  string  $code  The MSIC code
      * @return string|null The section letter or null if not found
+     *
      * @throws ValidationException If the code format is invalid
      */
     public function getSection(string $code): ?string
     {
         $this->validate($code);
 
-        if (self::NOT_APPLICABLE === $code) {
+        if ($code === self::NOT_APPLICABLE) {
             return null;
         }
 
@@ -129,7 +131,7 @@ class MsicValidator
     /**
      * Get the description for a section letter.
      *
-     * @param string $section The section letter
+     * @param  string  $section  The section letter
      * @return string|null The section description or null if not found
      */
     public function getSectionDescription(string $section): ?string
@@ -140,20 +142,21 @@ class MsicValidator
     /**
      * Format a MSIC code with proper section prefix.
      *
-     * @param string $code The MSIC code to format
+     * @param  string  $code  The MSIC code to format
      * @return string The formatted code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function format(string $code): string
     {
         $this->validate($code);
 
-        if (self::NOT_APPLICABLE === $code) {
+        if ($code === self::NOT_APPLICABLE) {
             return $code;
         }
 
         $section = $this->getSection($code);
-        if (null === $section) {
+        if ($section === null) {
             return $code;
         }
 
@@ -163,25 +166,27 @@ class MsicValidator
     /**
      * Parse a formatted MSIC code back to its numeric form.
      *
-     * @param string $formattedCode The formatted MSIC code
+     * @param  string  $formattedCode  The formatted MSIC code
      * @return string The numeric code
+     *
      * @throws ValidationException If the formatted code is invalid
      */
     public function parse(string $formattedCode): string
     {
         // Check special case
-        if (self::NOT_APPLICABLE === $formattedCode) {
+        if ($formattedCode === self::NOT_APPLICABLE) {
             return $formattedCode;
         }
 
         // Check if code is already in numeric form
         if (preg_match('/^\d{5}$/', $formattedCode)) {
             $this->validate($formattedCode);
+
             return $formattedCode;
         }
 
         // Parse formatted code (e.g., "C.10101")
-        if (!preg_match('/^([A-U])\.\d{5}$/', $formattedCode, $matches)) {
+        if (! preg_match('/^([A-U])\.\d{5}$/', $formattedCode, $matches)) {
             throw new ValidationException(
                 'Invalid formatted MSIC code',
                 ['msic' => ['Formatted MSIC code must be in the form "X.00000" where X is a section letter']]
@@ -206,15 +211,16 @@ class MsicValidator
     /**
      * Check if a code belongs to a specific section.
      *
-     * @param string $code The MSIC code to check
-     * @param string $section The section letter to check against
+     * @param  string  $code  The MSIC code to check
+     * @param  string  $section  The section letter to check against
      * @return bool True if the code belongs to the section
+     *
      * @throws ValidationException If either code or section is invalid
      */
     public function isInSection(string $code, string $section): bool
     {
         $section = strtoupper($section);
-        if (!isset(self::SECTION_MAPPING[$section])) {
+        if (! isset(self::SECTION_MAPPING[$section])) {
             throw new ValidationException(
                 'Invalid section letter',
                 ['section' => ['Invalid MSIC section letter']]

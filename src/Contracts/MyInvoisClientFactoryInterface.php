@@ -13,17 +13,17 @@ interface MyInvoisClientFactoryInterface
     /**
      * Create a new MyInvois client instance.
      *
-     * @param string|null $clientId The client ID for API authentication (optional if using environment config)
-     * @param string|null $clientSecret The client secret for API authentication (optional if using environment config)
-     * @param string|null $baseUrl The base URL for the API (optional, defaults to production URL)
-     * @param GuzzleClient|null $httpClient Custom HTTP client instance
-     * @param array $options Additional configuration options
+     * @param  string|null  $clientId  The client ID for API authentication (optional if using environment config)
+     * @param  string|null  $clientSecret  The client secret for API authentication (optional if using environment config)
+     * @param  string|null  $baseUrl  The base URL for the API (optional, defaults to production URL)
+     * @param  GuzzleClient|null  $httpClient  Custom HTTP client instance
+     * @param  array  $options  Additional configuration options
+     *
      *     @option bool $cacheEnabled Whether to enable token caching (default: true)
      *     @option string $cacheStore The cache store to use (default: 'file')
      *     @option int $cacheTtl Cache TTL in seconds (default: 3600)
      *     @option bool $loggingEnabled Whether to enable request/response logging (default: true)
      *     @option string $logChannel The log channel to use (default: 'stack')
-     * @return MyInvoisClient
      *
      * @throws \InvalidArgumentException If required configuration is missing
      */
@@ -38,10 +38,9 @@ interface MyInvoisClientFactoryInterface
     /**
      * Create a client instance for the sandbox environment.
      *
-     * @param string|null $clientId Sandbox client ID
-     * @param string|null $clientSecret Sandbox client secret
-     * @param array $options Additional configuration options
-     * @return MyInvoisClient
+     * @param  string|null  $clientId  Sandbox client ID
+     * @param  string|null  $clientSecret  Sandbox client secret
+     * @param  array  $options  Additional configuration options
      */
     public function sandbox(
         ?string $clientId = null,
@@ -52,10 +51,9 @@ interface MyInvoisClientFactoryInterface
     /**
      * Create a client instance for the production environment.
      *
-     * @param string|null $clientId Production client ID
-     * @param string|null $clientSecret Production client secret
-     * @param array $options Additional configuration options
-     * @return MyInvoisClient
+     * @param  string|null  $clientId  Production client ID
+     * @param  string|null  $clientSecret  Production client secret
+     * @param  array  $options  Additional configuration options
      */
     public function production(
         ?string $clientId = null,
@@ -66,11 +64,11 @@ interface MyInvoisClientFactoryInterface
     /**
      * Create a client instance for an intermediary system.
      *
-     * @param string $clientId Intermediary client ID
-     * @param string $clientSecret Intermediary client secret
-     * @param string $taxpayerTin TIN of the taxpayer being represented
-     * @param array $options Additional configuration options
-     * @return MyInvoisClient
+     * @param  string  $clientId  Intermediary client ID
+     * @param  string  $clientSecret  Intermediary client secret
+     * @param  string  $taxpayerTin  TIN of the taxpayer being represented
+     * @param  array  $options  Additional configuration options
+     *
      * @throws \InvalidArgumentException If required parameters are missing
      * @throws \Nava\MyInvois\Exception\ValidationException If TIN format is invalid
      */
@@ -84,11 +82,10 @@ interface MyInvoisClientFactoryInterface
     /**
      * Create an intermediary client instance for the sandbox environment.
      *
-     * @param string $clientId Sandbox intermediary client ID
-     * @param string $clientSecret Sandbox intermediary client secret
-     * @param string $taxpayerTin TIN of the taxpayer being represented
-     * @param array $options Additional configuration options
-     * @return MyInvoisClient
+     * @param  string  $clientId  Sandbox intermediary client ID
+     * @param  string  $clientSecret  Sandbox intermediary client secret
+     * @param  string  $taxpayerTin  TIN of the taxpayer being represented
+     * @param  array  $options  Additional configuration options
      */
     public function intermediarySandbox(
         string $clientId,
@@ -100,15 +97,12 @@ interface MyInvoisClientFactoryInterface
     /**
      * Set the default configuration options for all new client instances.
      *
-     * @param array $options Default configuration options
-     * @return void
+     * @param  array  $options  Default configuration options
      */
     public function configure(array $options): void;
 
     /**
      * Get the current default configuration options.
-     *
-     * @return array
      */
     public function getDefaultOptions(): array;
 }

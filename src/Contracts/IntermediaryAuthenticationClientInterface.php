@@ -30,8 +30,8 @@ interface IntermediaryAuthenticationClientInterface extends AuthenticationClient
      * - Update the internal state to use this TIN for subsequent requests
      * - Ensure proper caching keys are used for this taxpayer
      *
-     * @param string $tin Tax Identification Number of the represented taxpayer
-     * @return self
+     * @param  string  $tin  Tax Identification Number of the represented taxpayer
+     *
      * @throws ValidationException If TIN format is invalid
      */
     public function onBehalfOf(string $tin): self;
@@ -57,9 +57,6 @@ interface IntermediaryAuthenticationClientInterface extends AuthenticationClient
      * - Handle intermediary-specific error responses
      * - Cache tokens separately for each taxpayer
      *
-     * @throws ValidationException If no TIN has been set or if the request is invalid
-     * @throws AuthenticationException If authentication fails or intermediary is not authorized
-     * @throws NetworkException If a network error occurs
      * @return array{
      *     access_token: string,
      *     token_type: string,
@@ -67,6 +64,10 @@ interface IntermediaryAuthenticationClientInterface extends AuthenticationClient
      *     scope: string,
      *     created_at?: int
      * } The token data including expiration information
+     *
+     * @throws ValidationException If no TIN has been set or if the request is invalid
+     * @throws AuthenticationException If authentication fails or intermediary is not authorized
+     * @throws NetworkException If a network error occurs
      */
     public function authenticate(): array;
 
@@ -79,10 +80,11 @@ interface IntermediaryAuthenticationClientInterface extends AuthenticationClient
      * - Obtain a new token if needed
      * - Handle taxpayer-specific token storage
      *
+     * @return string A valid access token
+     *
      * @throws ValidationException If no TIN has been set
      * @throws AuthenticationException If authentication fails
      * @throws NetworkException If a network error occurs
-     * @return string A valid access token
      */
     public function getAccessToken(): string;
 

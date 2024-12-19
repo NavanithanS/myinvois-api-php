@@ -20,8 +20,9 @@ trait RecentDocumentsApi
     /**
      * Get recent documents with optional filtering.
      *
-     * @param array $filters Optional filters
+     * @param  array  $filters  Optional filters
      * @return array Filtered documents
+     *
      * @throws ApiException|ValidationException
      */
     public function getRecentDocuments(array $filters = []): array
@@ -41,7 +42,7 @@ trait RecentDocumentsApi
                 ['query' => $query]
             );
 
-            if (!isset($response['result']) || !isset($response['metadata'])) {
+            if (! isset($response['result']) || ! isset($response['metadata'])) {
                 throw new ApiException('Invalid response format from recent documents endpoint');
             }
 

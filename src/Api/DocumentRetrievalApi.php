@@ -16,6 +16,7 @@ use Webmozart\Assert\Assert;
 trait DocumentRetrievalApi
 {
     protected ?LoggerInterface $logger = null;
+
     use UuidValidationTrait;
 
     /**
@@ -24,9 +25,7 @@ trait DocumentRetrievalApi
      * This method retrieves the complete document including original content and metadata.
      * For documents with invalid status, use getDocumentDetails() instead.
      *
-     * @param string $uuid Document's unique identifier
-     * @throws ValidationException If UUID format is invalid
-     * @throws ApiException If the API request fails
+     * @param  string  $uuid  Document's unique identifier
      * @return array{
      *     uuid: string,
      *     submissionUid: string,
@@ -52,6 +51,9 @@ trait DocumentRetrievalApi
      *     createdByUserId: string,
      *     document: Document
      * }
+     *
+     * @throws ValidationException If UUID format is invalid
+     * @throws ApiException If the API request fails
      */
     public function getDocument(string $uuid): array
     {
@@ -65,7 +67,7 @@ trait DocumentRetrievalApi
                 "/api/v1.0/documents/{$uuid}/raw"
             );
 
-            if (!isset($response['uuid'])) {
+            if (! isset($response['uuid'])) {
                 throw new ApiException('Invalid response format from document endpoint');
             }
 
@@ -88,9 +90,10 @@ trait DocumentRetrievalApi
     /**
      * Get a document's shareable URL.
      *
-     * @param string $uuid Document's unique identifier
-     * @param string $longId Document's long ID (must be obtained first via getDocument())
+     * @param  string  $uuid  Document's unique identifier
+     * @param  string  $longId  Document's long ID (must be obtained first via getDocument())
      * @return string The shareable URL
+     *
      * @throws ValidationException If parameters are invalid
      */
     public function getDocumentShareableUrl(string $uuid, string $longId): string
@@ -100,6 +103,7 @@ trait DocumentRetrievalApi
         Assert::regex($longId, '/^[A-Z0-9\s]{40,}$/', 'Invalid long ID format');
 
         $baseUrl = rtrim($this->baseUrl, '/');
+
         return "{$baseUrl}/{$uuid}/share/{$longId}";
     }
 
@@ -186,5 +190,4 @@ trait DocumentRetrievalApi
                 break;
         }
     }
-
 }

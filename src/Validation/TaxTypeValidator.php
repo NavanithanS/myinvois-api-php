@@ -48,19 +48,20 @@ class TaxTypeValidator
     /**
      * Validate a tax type code.
      *
-     * @param string $code The tax type code to validate
+     * @param  string  $code  The tax type code to validate
      * @return bool True if valid
+     *
      * @throws ValidationException If the code is invalid
      */
     public function validate(string $code): bool
     {
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::TAX_TYPES[$code])) {
+        if (! isset(self::TAX_TYPES[$code])) {
             throw new ValidationException(
                 'Invalid tax type code',
                 ['tax_type' => [
-                    'Code must be one of: ' . implode(', ', array_keys(self::TAX_TYPES)),
+                    'Code must be one of: '.implode(', ', array_keys(self::TAX_TYPES)),
                 ]]
             );
         }
@@ -71,63 +72,71 @@ class TaxTypeValidator
     /**
      * Get the description for a tax type code.
      *
-     * @param string $code The tax type code
+     * @param  string  $code  The tax type code
      * @return string|null The description or null if not found
      */
     public function getDescription(string $code): ?string
     {
         $code = $this->normalizeCode($code);
+
         return self::TAX_TYPES[$code] ?? null;
     }
 
     /**
      * Get the standard rate for a tax type.
      *
-     * @param string $code The tax type code
+     * @param  string  $code  The tax type code
      * @return float The standard rate as a percentage
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getStandardRate(string $code): float
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return self::STANDARD_RATES[$code];
     }
 
     /**
      * Check if a tax type can have exemptions.
      *
-     * @param string $code The tax type code
+     * @param  string  $code  The tax type code
      * @return bool True if the tax type can have exemptions
+     *
      * @throws ValidationException If the code is invalid
      */
     public function canHaveExemption(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::EXEMPTIBLE_TAXES, true);
     }
 
     /**
      * Check if a tax type requires registration number.
      *
-     * @param string $code The tax type code
+     * @param  string  $code  The tax type code
      * @return bool True if registration number is required
+     *
      * @throws ValidationException If the code is invalid
      */
     public function requiresRegistration(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::REQUIRES_REGISTRATION, true);
     }
 
     /**
      * Validate a registration number format.
      *
-     * @param string $code The tax type code
-     * @param string $registrationNumber The registration number to validate
+     * @param  string  $code  The tax type code
+     * @param  string  $registrationNumber  The registration number to validate
      * @return bool True if valid
+     *
      * @throws ValidationException If the code or registration number is invalid
      */
     public function validateRegistrationNumber(string $code, string $registrationNumber): bool
@@ -135,7 +144,7 @@ class TaxTypeValidator
         $this->validate($code);
         $code = $this->normalizeCode($code);
 
-        if (!$this->requiresRegistration($code)) {
+        if (! $this->requiresRegistration($code)) {
             return true; // Registration not required for this tax type
         }
 
@@ -147,7 +156,7 @@ class TaxTypeValidator
             default => '/.+/'
         };
 
-        if (!preg_match($pattern, $registrationNumber)) {
+        if (! preg_match($pattern, $registrationNumber)) {
             throw new ValidationException(
                 'Invalid registration number format',
                 ['registration' => ['Registration number format is invalid for the specified tax type']]
@@ -160,10 +169,11 @@ class TaxTypeValidator
     /**
      * Calculate tax amount.
      *
-     * @param string $code The tax type code
-     * @param float $baseAmount The base amount to calculate tax on
-     * @param float|null $rate Optional custom rate (if null, uses standard rate)
+     * @param  string  $code  The tax type code
+     * @param  float  $baseAmount  The base amount to calculate tax on
+     * @param  float|null  $rate  Optional custom rate (if null, uses standard rate)
      * @return float The calculated tax amount
+     *
      * @throws ValidationException If the code is invalid or rate is invalid
      */
     public function calculateTax(string $code, float $baseAmount, ?float $rate = null): float
@@ -183,7 +193,7 @@ class TaxTypeValidator
         }
 
         // Handle exemption
-        if ('E' === $code || '06' === $code) {
+        if ($code === 'E' || $code === '06') {
             return 0.0;
         }
 
@@ -194,22 +204,25 @@ class TaxTypeValidator
     /**
      * Format a tax type code.
      *
-     * @param string $code The code to format
+     * @param  string  $code  The code to format
      * @return string The formatted code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function format(string $code): string
     {
         $normalized = $this->normalizeCode($code);
         $this->validate($normalized);
+
         return $normalized;
     }
 
     /**
      * Parse a tax type identifier into a valid tax type code.
      *
-     * @param string|int $identifier The tax type identifier to parse
+     * @param  string|int  $identifier  The tax type identifier to parse
      * @return string The normalized tax type code
+     *
      * @throws ValidationException If the identifier is invalid
      */
     public function parse($identifier): string
@@ -220,6 +233,7 @@ class TaxTypeValidator
 
         $normalized = $this->normalizeCode($identifier);
         $this->validate($normalized);
+
         return $normalized;
     }
 
@@ -262,8 +276,9 @@ class TaxTypeValidator
     /**
      * Get validation rules for a specific tax type.
      *
-     * @param string $code The tax type code
+     * @param  string  $code  The tax type code
      * @return array Validation rules and requirements
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getValidationRules(string $code): array
@@ -288,7 +303,7 @@ class TaxTypeValidator
     /**
      * Normalize a tax type code.
      *
-     * @param string $code The code to normalize
+     * @param  string  $code  The code to normalize
      * @return string The normalized code
      */
     private function normalizeCode(string $code): string

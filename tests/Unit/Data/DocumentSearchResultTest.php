@@ -103,7 +103,7 @@ class DocumentSearchResultTest extends TestCase
                 DocumentSearchResult::fromArray($invalidData);
                 $this->fail("Expected exception for non-numeric $field");
             } catch (\InvalidArgumentException $e) {
-                $this->assertStringContainsString("must be numeric", $e->getMessage());
+                $this->assertStringContainsString('must be numeric', $e->getMessage());
             }
 
             // Test negative value
@@ -113,7 +113,7 @@ class DocumentSearchResultTest extends TestCase
                 DocumentSearchResult::fromArray($invalidData);
                 $this->fail("Expected exception for negative $field");
             } catch (\InvalidArgumentException $e) {
-                $this->assertStringContainsString("cannot be negative", $e->getMessage());
+                $this->assertStringContainsString('cannot be negative', $e->getMessage());
             }
         }
     }
@@ -139,7 +139,7 @@ class DocumentSearchResultTest extends TestCase
                     DocumentSearchResult::fromArray($invalidData);
                     $this->fail("Expected exception for invalid $field: $invalidTin");
                 } catch (\InvalidArgumentException $e) {
-                    $this->assertStringContainsString("must start with C followed by 10 digits", $e->getMessage());
+                    $this->assertStringContainsString('must start with C followed by 10 digits', $e->getMessage());
                 }
             }
         }

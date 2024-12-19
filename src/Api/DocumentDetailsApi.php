@@ -14,10 +14,11 @@ use Webmozart\Assert\Assert;
 trait DocumentDetailsApi
 {
     use UuidValidationTrait;
+
     /**
      * Get detailed information about a document by its UUID.
      *
-     * @param string $uuid Document UUID
+     * @param  string  $uuid  Document UUID
      * @return array{
      *     uuid: string,
      *     submissionUid: string,
@@ -43,6 +44,7 @@ trait DocumentDetailsApi
      *     createdByUserId: string,
      *     validationResults: array
      * }
+     *
      * @throws ValidationException If the UUID format is invalid
      * @throws ApiException If the API request fails
      */
@@ -53,7 +55,7 @@ trait DocumentDetailsApi
 
             $response = $this->apiClient->request('GET', "/api/v1.0/documents/{$uuid}/details");
 
-            if (!isset($response['uuid'])) {
+            if (! isset($response['uuid'])) {
                 throw new ApiException('Invalid response format from document details endpoint');
             }
 
@@ -86,7 +88,7 @@ trait DocumentDetailsApi
     /**
      * Get document status validation results.
      *
-     * @param string $uuid Document UUID
+     * @param  string  $uuid  Document UUID
      * @return array{
      *     status: string,
      *     validationSteps: array<array{
@@ -95,12 +97,14 @@ trait DocumentDetailsApi
      *         error?: array
      *     }>
      * }
+     *
      * @throws ValidationException If the UUID format is invalid
      * @throws ApiException If the API request fails
      */
     public function getDocumentValidationResults(string $uuid): array
     {
         $details = $this->getDocumentDetails($uuid);
+
         return $details['validationResults'] ?? [
             'status' => $details['status'],
             'validationSteps' => [],
@@ -110,9 +114,10 @@ trait DocumentDetailsApi
     /**
      * Generate public URL for document viewing.
      *
-     * @param string $uuid Document UUID
-     * @param string $longId Document long ID
+     * @param  string  $uuid  Document UUID
+     * @param  string  $longId  Document long ID
      * @return string Public URL
+     *
      * @throws ValidationException If the UUID or long ID format is invalid
      */
     public function generateDocumentPublicUrl(string $uuid, string $longId): string
@@ -122,6 +127,7 @@ trait DocumentDetailsApi
         Assert::regex($longId, '/^[A-Z0-9\s]{32,}$/', 'Invalid long ID format');
 
         $baseUrl = rtrim($this->config['base_url'] ?? '', '/');
+
         return "{$baseUrl}/{$uuid}/share/{$longId}";
     }
 
@@ -185,7 +191,7 @@ trait DocumentDetailsApi
 
         } catch (\Throwable $e) {
             throw new ApiException(
-                'Failed to map document details: ' . $e->getMessage(),
+                'Failed to map document details: '.$e->getMessage(),
                 0,
                 $e
             );

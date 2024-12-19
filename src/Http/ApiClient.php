@@ -20,6 +20,7 @@ use Psr\Http\Message\ResponseInterface;
 class ApiClient
 {
     private ?string $accessToken = null;
+
     private ?int $tokenExpires = null;
 
     public function __construct(
@@ -30,16 +31,16 @@ class ApiClient
         private readonly CacheRepository $cache,
         private readonly AuthenticationClient $authClient,
         private readonly array $config = []
-    ) {
-    }
+    ) {}
 
     /**
      * Send a synchronous request to the API.
      *
-     * @param string $method HTTP method
-     * @param string $endpoint API endpoint
-     * @param array $options Request options
+     * @param  string  $method  HTTP method
+     * @param  string  $endpoint  API endpoint
+     * @param  array  $options  Request options
      * @return array Response data
+     *
      * @throws ApiException|ValidationException|AuthenticationException|NetworkException
      */
     public function request(string $method, string $endpoint, array $options = []): array
@@ -50,10 +51,9 @@ class ApiClient
     /**
      * Send an asynchronous request to the API.
      *
-     * @param string $method HTTP method
-     * @param string $endpoint API endpoint
-     * @param array $options Request options
-     * @return PromiseInterface
+     * @param  string  $method  HTTP method
+     * @param  string  $endpoint  API endpoint
+     * @param  array  $options  Request options
      */
     public function requestAsync(string $method, string $endpoint, array $options = []): PromiseInterface
     {
@@ -71,18 +71,19 @@ class ApiClient
 
             $this->logRequest($method, $endpoint, $options);
 
-            return $this->httpClient->requestAsync($method, $this->baseUrl . $endpoint, $options)
+            return $this->httpClient->requestAsync($method, $this->baseUrl.$endpoint, $options)
                 ->then(
-                    fn(ResponseInterface $response) => $this->handleResponse($response),
+                    fn (ResponseInterface $response) => $this->handleResponse($response),
                     function (RequestException $exception) use ($method, $endpoint, $options) {
                         if ($this->shouldRetry($exception)) {
                             return $this->retryRequest($method, $endpoint, $options);
                         }
+
                         return $this->handleRequestException($exception);
                     }
                 );
         } catch (\Throwable $e) {
-            throw new ApiException('Unexpected error occurred: ' . $e->getMessage(), 0, $e);
+            throw new ApiException('Unexpected error occurred: '.$e->getMessage(), 0, $e);
         }
     }
 
@@ -93,7 +94,7 @@ class ApiClient
      */
     private function authenticateIfNeeded(): void
     {
-        $tokenNeedsRefresh = !$this->accessToken ||
+        $tokenNeedsRefresh = ! $this->accessToken ||
             (($this->tokenExpires ?? 0) - time()) <= ($this->config['auth']['token_refresh_buffer'] ?? 300);
 
         if ($tokenNeedsRefresh) {
@@ -103,7 +104,7 @@ class ApiClient
                 $this->tokenExpires = time() + ($authResponse['expires_in'] ?? 3600);
             } catch (\Throwable $e) {
                 throw new AuthenticationException(
-                    'Failed to authenticate with API: ' . $e->getMessage(),
+                    'Failed to authenticate with API: '.$e->getMessage(),
                     0,
                     $e
                 );
@@ -164,9 +165,9 @@ class ApiClient
     private function handleRequestException(RequestException $e): never
     {
         $response = $e->getResponse();
-        if (!$response) {
+        if (! $response) {
             throw new NetworkException(
-                'Network error occurred: ' . $e->getMessage(),
+                'Network error occurred: '.$e->getMessage(),
                 0,
                 $e
             );
@@ -198,10 +199,8 @@ class ApiClient
                 $this->accessToken = null;
                 $this->tokenExpires = null;
                 throw new AuthenticationException($message, $statusCode, $e);
-
             case 429:
                 throw new ApiException('Rate limit exceeded', 429, $e);
-
             default:
                 throw new ApiException($message, $statusCode, $e);
         }
@@ -212,17 +211,18 @@ class ApiClient
      */
     private function shouldRetry(RequestException $e): bool
     {
-        if (!($this->config['http']['retry']['enabled'] ?? true)) {
+        if (! ($this->config['http']['retry']['enabled'] ?? true)) {
             return false;
         }
 
         $response = $e->getResponse();
-        if (!$response) {
+        if (! $response) {
             return true; // Retry network errors
         }
 
         $statusCode = $response->getStatusCode();
-        return 429 === $statusCode || $statusCode >= 500;
+
+        return $statusCode === 429 || $statusCode >= 500;
     }
 
     /**
@@ -242,6 +242,7 @@ class ApiClient
 
         return new Promise(function () use ($method, $endpoint, $options, $delay) {
             usleep($delay * 1000); // Convert to microseconds
+
             return $this->requestAsync($method, $endpoint, $options);
         });
     }
@@ -261,6 +262,7 @@ class ApiClient
         $base = 1000; // 1 second base
         $max = 10000; // 10 seconds max
         $exponential = min($base * pow(2, $retry), $max);
+
         return $exponential + random_int(0, min(1000, $exponential));
     }
 
@@ -269,7 +271,7 @@ class ApiClient
      */
     private function logRequest(string $method, string $endpoint, array $options): void
     {
-        if (!($this->config['logging']['enabled'] ?? false)) {
+        if (! ($this->config['logging']['enabled'] ?? false)) {
             return;
         }
 
@@ -290,7 +292,7 @@ class ApiClient
      */
     private function logResponse(ResponseInterface $response, array $data): void
     {
-        if (!($this->config['logging']['enabled'] ?? false)) {
+        if (! ($this->config['logging']['enabled'] ?? false)) {
             return;
         }
 

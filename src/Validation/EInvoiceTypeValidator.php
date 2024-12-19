@@ -42,19 +42,20 @@ class EInvoiceTypeValidator
     /**
      * Validate an e-invoice type code.
      *
-     * @param string $code The e-invoice type code to validate
+     * @param  string  $code  The e-invoice type code to validate
      * @return bool True if valid
+     *
      * @throws ValidationException If the code is invalid
      */
     public function validate(string $code): bool
     {
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::INVOICE_TYPES[$code])) {
+        if (! isset(self::INVOICE_TYPES[$code])) {
             throw new ValidationException(
                 'Invalid e-invoice type code',
                 ['type' => [
-                    'Code must be one of: ' . implode(', ', array_keys(self::INVOICE_TYPES)),
+                    'Code must be one of: '.implode(', ', array_keys(self::INVOICE_TYPES)),
                 ]]
             );
         }
@@ -65,104 +66,118 @@ class EInvoiceTypeValidator
     /**
      * Get the description for an e-invoice type code.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return string|null The description or null if not found
      */
     public function getDescription(string $code): ?string
     {
         $code = $this->normalizeCode($code);
+
         return self::INVOICE_TYPES[$code] ?? null;
     }
 
     /**
      * Check if an e-invoice type is self-billed.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return bool True if self-billed
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isSelfBilled(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::SELF_BILLED_TYPES, true);
     }
 
     /**
      * Check if an e-invoice type is a regular (non-self-billed) type.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return bool True if regular type
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isRegularType(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::REGULAR_TYPES, true);
     }
 
     /**
      * Check if an e-invoice type modifies an original invoice.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return bool True if modifying type
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isModifyingType(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::MODIFYING_TYPES, true);
     }
 
     /**
      * Check if an e-invoice type requires original invoice reference.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return bool True if original invoice reference required
+     *
      * @throws ValidationException If the code is invalid
      */
     public function requiresOriginalInvoice(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::REQUIRES_ORIGINAL, true);
     }
 
     /**
      * Check if an e-invoice type allows positive amounts.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return bool True if positive amounts allowed
+     *
      * @throws ValidationException If the code is invalid
      */
     public function allowsPositiveAmounts(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::POSITIVE_AMOUNT_TYPES, true);
     }
 
     /**
      * Check if an e-invoice type requires tax details.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return bool True if tax details required
+     *
      * @throws ValidationException If the code is invalid
      */
     public function requiresTaxDetails(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::REQUIRES_TAX_DETAILS, true);
     }
 
     /**
      * Get validation rules for an e-invoice type.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return array Validation rules and requirements
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getValidationRules(string $code): array
@@ -185,8 +200,9 @@ class EInvoiceTypeValidator
     /**
      * Get required fields for an e-invoice type.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return array List of required fields
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getRequiredFields(string $code): array
@@ -226,8 +242,9 @@ class EInvoiceTypeValidator
     /**
      * Get amount validation rules for an e-invoice type.
      *
-     * @param string $code The e-invoice type code
+     * @param  string  $code  The e-invoice type code
      * @return array Amount validation rules
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getAmountValidationRules(string $code): array
@@ -246,14 +263,16 @@ class EInvoiceTypeValidator
     /**
      * Format an e-invoice type code.
      *
-     * @param string $code The code to format
+     * @param  string  $code  The code to format
      * @return string The formatted code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function format(string $code): string
     {
         $normalized = $this->normalizeCode($code);
         $this->validate($normalized);
+
         return $normalized;
     }
 
@@ -309,7 +328,7 @@ class EInvoiceTypeValidator
     /**
      * Normalize an e-invoice type code.
      *
-     * @param string $code The code to normalize
+     * @param  string  $code  The code to normalize
      * @return string The normalized code
      */
     private function normalizeCode(string $code): string

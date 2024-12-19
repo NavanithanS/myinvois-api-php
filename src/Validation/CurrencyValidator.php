@@ -72,15 +72,16 @@ class CurrencyValidator
     /**
      * Validate a currency code.
      *
-     * @param string $code The currency code to validate
+     * @param  string  $code  The currency code to validate
      * @return bool True if valid
+     *
      * @throws ValidationException If the code is invalid
      */
     public function validate(string $code): bool
     {
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::CURRENCIES[$code])) {
+        if (! isset(self::CURRENCIES[$code])) {
             throw new ValidationException(
                 'Invalid currency code',
                 ['currency' => ['Code must be a valid ISO-4217 currency code']]
@@ -93,35 +94,39 @@ class CurrencyValidator
     /**
      * Get the description for a currency code.
      *
-     * @param string $code The currency code
+     * @param  string  $code  The currency code
      * @return string|null The description or null if not found
      */
     public function getDescription(string $code): ?string
     {
         $code = $this->normalizeCode($code);
+
         return self::CURRENCIES[$code] ?? null;
     }
 
     /**
      * Get the number of decimal places for a currency.
      *
-     * @param string $code The currency code
+     * @param  string  $code  The currency code
      * @return int Number of decimal places
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getDecimalPlaces(string $code): int
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return self::CURRENCY_SCALES[$code] ?? self::CURRENCY_SCALES['default'];
     }
 
     /**
      * Format an amount according to currency rules.
      *
-     * @param string $code The currency code
-     * @param float $amount The amount to format
+     * @param  string  $code  The currency code
+     * @param  float  $amount  The amount to format
      * @return string Formatted amount
+     *
      * @throws ValidationException If the code is invalid
      */
     public function formatAmount(string $code, float $amount): string
@@ -129,6 +134,7 @@ class CurrencyValidator
         $this->validate($code);
         $code = $this->normalizeCode($code);
         $decimals = $this->getDecimalPlaces($code);
+
         return number_format($amount, $decimals, '.', '');
     }
 
@@ -145,7 +151,7 @@ class CurrencyValidator
     /**
      * Normalize a currency code.
      *
-     * @param string $code The code to normalize
+     * @param  string  $code  The code to normalize
      * @return string The normalized code
      */
     private function normalizeCode(string $code): string
@@ -186,19 +192,20 @@ class InvoiceTypeValidator
     /**
      * Validate an invoice type code.
      *
-     * @param string $code The invoice type code to validate
+     * @param  string  $code  The invoice type code to validate
      * @return bool True if valid
+     *
      * @throws ValidationException If the code is invalid
      */
     public function validate(string $code): bool
     {
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::INVOICE_TYPES[$code])) {
+        if (! isset(self::INVOICE_TYPES[$code])) {
             throw new ValidationException(
                 'Invalid invoice type code',
                 ['invoice_type' => [
-                    'Code must be one of: ' . implode(', ', array_keys(self::INVOICE_TYPES)),
+                    'Code must be one of: '.implode(', ', array_keys(self::INVOICE_TYPES)),
                 ]]
             );
         }
@@ -209,62 +216,70 @@ class InvoiceTypeValidator
     /**
      * Get the description for an invoice type code.
      *
-     * @param string $code The invoice type code
+     * @param  string  $code  The invoice type code
      * @return string|null The description or null if not found
      */
     public function getDescription(string $code): ?string
     {
         $code = $this->normalizeCode($code);
+
         return self::INVOICE_TYPES[$code] ?? null;
     }
 
     /**
      * Check if an invoice type is self-billed.
      *
-     * @param string $code The invoice type code
+     * @param  string  $code  The invoice type code
      * @return bool True if self-billed
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isSelfBilled(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::SELF_BILLED_TYPES, true);
     }
 
     /**
      * Check if an invoice type is an adjustment document.
      *
-     * @param string $code The invoice type code
+     * @param  string  $code  The invoice type code
      * @return bool True if adjustment
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isAdjustment(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::ADJUSTMENT_TYPES, true);
     }
 
     /**
      * Check if an invoice type is a refund document.
      *
-     * @param string $code The invoice type code
+     * @param  string  $code  The invoice type code
      * @return bool True if refund
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isRefund(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::REFUND_TYPES, true);
     }
 
     /**
      * Get validation rules for an invoice type.
      *
-     * @param string $code The invoice type code
+     * @param  string  $code  The invoice type code
      * @return array Validation rules and requirements
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getValidationRules(string $code): array
@@ -278,7 +293,7 @@ class InvoiceTypeValidator
             'is_refund' => $this->isRefund($code),
             'requires_original_invoice' => $this->isAdjustment($code) || $this->isRefund($code),
             'requires_reason' => $this->isAdjustment($code) || $this->isRefund($code),
-            'allows_positive_amounts' => !in_array($code, ['02', '12', '04', '14'], true),
+            'allows_positive_amounts' => ! in_array($code, ['02', '12', '04', '14'], true),
             'requires_tax_details' => in_array($code, ['01', '11'], true),
         ];
     }
@@ -286,14 +301,16 @@ class InvoiceTypeValidator
     /**
      * Format an invoice type code.
      *
-     * @param string $code The code to format
+     * @param  string  $code  The code to format
      * @return string The formatted code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function format(string $code): string
     {
         $normalized = $this->normalizeCode($code);
         $this->validate($normalized);
+
         return $normalized;
     }
 
@@ -336,7 +353,7 @@ class InvoiceTypeValidator
     /**
      * Normalize an invoice type code.
      *
-     * @param string $code The code to normalize
+     * @param  string  $code  The code to normalize
      * @return string The normalized code
      */
     private function normalizeCode(string $code): string

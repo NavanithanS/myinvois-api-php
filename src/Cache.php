@@ -29,9 +29,7 @@ class Cache implements CacheRepository
     /**
      * Get an item from the cache.
      *
-     * @param string $key
-     * @param mixed $default
-     * @return mixed
+     * @param  string  $key
      */
     public function get($key, mixed $default = null): mixed
     {
@@ -41,10 +39,9 @@ class Cache implements CacheRepository
     /**
      * Store an item in the cache.
      *
-     * @param string $key
-     * @param mixed $value
-     * @param DateTimeInterface|DateInterval|int|null $ttl
-     * @return bool
+     * @param  string  $key
+     * @param  mixed  $value
+     * @param  DateTimeInterface|DateInterval|int|null  $ttl
      */
     public function put($key, $value, $ttl = null): bool
     {
@@ -54,10 +51,9 @@ class Cache implements CacheRepository
     /**
      * Store an item in the cache if the key doesn't exist.
      *
-     * @param string $key
-     * @param mixed $value
-     * @param DateTimeInterface|DateInterval|int|null $ttl
-     * @return bool
+     * @param  string  $key
+     * @param  mixed  $value
+     * @param  DateTimeInterface|DateInterval|int|null  $ttl
      */
     public function add($key, $value, $ttl = null): bool
     {
@@ -67,8 +63,8 @@ class Cache implements CacheRepository
     /**
      * Increment the value of an item in the cache.
      *
-     * @param string $key
-     * @param mixed $value
+     * @param  string  $key
+     * @param  mixed  $value
      * @return int|bool
      */
     public function increment($key, $value = 1)
@@ -79,8 +75,8 @@ class Cache implements CacheRepository
     /**
      * Decrement the value of an item in the cache.
      *
-     * @param string $key
-     * @param mixed $value
+     * @param  string  $key
+     * @param  mixed  $value
      * @return int|bool
      */
     public function decrement($key, $value = 1)
@@ -91,9 +87,8 @@ class Cache implements CacheRepository
     /**
      * Store an item in the cache forever.
      *
-     * @param string $key
-     * @param mixed $value
-     * @return bool
+     * @param  string  $key
+     * @param  mixed  $value
      */
     public function forever($key, $value): bool
     {
@@ -103,8 +98,7 @@ class Cache implements CacheRepository
     /**
      * Remove an item from the cache.
      *
-     * @param string $key
-     * @return bool
+     * @param  string  $key
      */
     public function forget($key): bool
     {
@@ -113,8 +107,6 @@ class Cache implements CacheRepository
 
     /**
      * Remove all items from the cache.
-     *
-     * @return bool
      */
     public function flush(): bool
     {
@@ -123,8 +115,6 @@ class Cache implements CacheRepository
 
     /**
      * Get the cache key prefix.
-     *
-     * @return string
      */
     public function getPrefix(): string
     {
@@ -134,8 +124,7 @@ class Cache implements CacheRepository
     /**
      * Check if an item exists in the cache.
      *
-     * @param string $key
-     * @return bool
+     * @param  string  $key
      */
     public function has($key): bool
     {
@@ -145,9 +134,7 @@ class Cache implements CacheRepository
     /**
      * Get multiple items from the cache.
      *
-     * @param array $keys
-     * @param mixed $default
-     * @return array
+     * @param  mixed  $default
      */
     public function many(array $keys): array
     {
@@ -157,9 +144,7 @@ class Cache implements CacheRepository
     /**
      * Store multiple items in the cache.
      *
-     * @param array $values
-     * @param DateTimeInterface|DateInterval|int|null $ttl
-     * @return bool
+     * @param  DateTimeInterface|DateInterval|int|null  $ttl
      */
     public function putMany(array $values, $ttl = null): bool
     {
@@ -169,10 +154,8 @@ class Cache implements CacheRepository
     /**
      * Get an item from the cache, or execute the given Closure and store the result.
      *
-     * @param string $key
-     * @param DateTimeInterface|DateInterval|int|null $ttl
-     * @param \Closure $callback
-     * @return mixed
+     * @param  string  $key
+     * @param  DateTimeInterface|DateInterval|int|null  $ttl
      */
     public function remember($key, $ttl, \Closure $callback): mixed
     {
@@ -182,9 +165,7 @@ class Cache implements CacheRepository
     /**
      * Get an item from the cache, or execute the given Closure and store the result forever.
      *
-     * @param string $key
-     * @param \Closure $callback
-     * @return mixed
+     * @param  string  $key
      */
     public function rememberForever($key, \Closure $callback): mixed
     {
@@ -194,9 +175,7 @@ class Cache implements CacheRepository
     /**
      * Get an item from the cache, or execute the given Closure and store the result.
      *
-     * @param string $key
-     * @param \Closure $callback
-     * @return mixed
+     * @param  string  $key
      */
     public function sear($key, \Closure $callback): mixed
     {

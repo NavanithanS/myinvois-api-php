@@ -15,39 +15,68 @@ use Webmozart\Assert\Assert;
 class DocumentSearchResult extends DataTransferObject implements JsonSerializable
 {
     public string $uuid;
+
     public string $submissionUID;
+
     public string $longId;
+
     public string $internalId;
+
     public string $typeName;
+
     public string $typeVersionName;
+
     public string $issuerTin;
+
     public string $issuerName;
+
     public ?string $receiverId;
+
     public ?string $receiverName;
+
     public DateTimeImmutable $dateTimeIssued;
+
     public DateTimeImmutable $dateTimeReceived;
+
     public DateTimeImmutable $dateTimeValidated;
+
     public float $totalSales;
+
     public float $totalDiscount;
+
     public float $netAmount;
+
     public float $total;
+
     public string $status;
+
     public ?DateTimeImmutable $cancelDateTime;
+
     public ?DateTimeImmutable $rejectRequestDateTime;
+
     public ?string $documentStatusReason;
+
     public string $createdByUserId;
+
     public string $supplierTIN;
+
     public string $supplierName;
+
     public string $submissionChannel;
+
     public ?string $intermediaryName;
+
     public ?string $intermediaryTIN;
+
     public string $buyerName;
+
     public string $buyerTIN;
 
     /**
      * Create a new DocumentSearchResult instance from an array.
      *
-     * @param array $data Raw data from API
+     * @param  array  $data  Raw data from API
+     *
      * @throws \InvalidArgumentException If data validation fails
      */
     public static function fromArray(array $data): self
@@ -75,7 +104,7 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
         // Validate TIN formats
         $tinFields = ['issuerTin', 'supplierTIN', 'buyerTIN'];
         foreach ($tinFields as $field) {
-            if (!preg_match('/^C\d{10}$/', $data[$field])) {
+            if (! preg_match('/^C\d{10}$/', $data[$field])) {
                 throw new \InvalidArgumentException(
                     sprintf('%s must start with C followed by 10 digits', ucfirst($field))
                 );
@@ -192,7 +221,7 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
      */
     public function isErpSubmission(): bool
     {
-        return 'ERP' === $this->submissionChannel;
+        return $this->submissionChannel === 'ERP';
     }
 
     /**
@@ -200,7 +229,7 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
      */
     public function hasIntermediary(): bool
     {
-        return null !== $this->intermediaryTIN;
+        return $this->intermediaryTIN !== null;
     }
 
     /**

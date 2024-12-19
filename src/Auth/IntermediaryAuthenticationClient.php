@@ -5,7 +5,6 @@ namespace Nava\MyInvois\Auth;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
-use Nava\MyInvois\Config;
 use Nava\MyInvois\Contracts\IntermediaryAuthenticationClientInterface;
 use Nava\MyInvois\Exception\AuthenticationException;
 use Nava\MyInvois\Exception\ValidationException;
@@ -15,10 +14,13 @@ use Webmozart\Assert\Assert;
 class IntermediaryAuthenticationClient extends AuthenticationClient implements IntermediaryAuthenticationClientInterface
 {
     protected const TOKEN_CACHE_PREFIX = 'myinvois_intermediary_token_';
+
     private const TIN_PATTERN = '/^C\d{10}$/';
+
     private const TOKEN_REFRESH_BUFFER = 300; // 5 minutes before expiry
 
     private ?string $onBehalfOf = null;
+
     private array $cachedTokens = [];
 
     public function __construct(
@@ -48,7 +50,7 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
      */
     public function onBehalfOf(string $tin): self
     {
-        if (!preg_match(self::TIN_PATTERN, $tin)) {
+        if (! preg_match(self::TIN_PATTERN, $tin)) {
             $this->logError('Invalid TIN format provided', ['tin' => $tin]);
             throw new ValidationException(
                 'Invalid TIN format',
@@ -79,7 +81,7 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
      */
     public function authenticate(): array
     {
-        if (!$this->onBehalfOf) {
+        if (! $this->onBehalfOf) {
             $this->logError('Authentication attempted without setting taxpayer TIN');
             throw new ValidationException(
                 'Taxpayer TIN must be set using onBehalfOf() before authenticating',
@@ -128,7 +130,7 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
     protected function handleIntermediaryAuthError(GuzzleException $e): \Throwable
     {
         $response = $e->getResponse();
-        if (!$response) {
+        if (! $response) {
             return parent::handleAuthenticationError($e);
         }
 
@@ -142,8 +144,9 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
                     'error' => $errorMessage,
                     'taxpayer_tin' => $this->onBehalfOf,
                 ]);
+
                 return new AuthenticationException(
-                    'Intermediary not authorized for this taxpayer: ' . $errorMessage,
+                    'Intermediary not authorized for this taxpayer: '.$errorMessage,
                     403,
                     $e
                 );
@@ -151,7 +154,7 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
             case 400:
                 if (str_contains(strtolower($errorMessage), 'taxpayer')) {
                     return new ValidationException(
-                        'Invalid taxpayer TIN: ' . $errorMessage,
+                        'Invalid taxpayer TIN: '.$errorMessage,
                         ['tin' => [$errorMessage]],
                         400,
                         $e
@@ -176,9 +179,9 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
         $grantedScopes = explode(' ', $scope);
 
         $missingScopes = array_diff($requiredScopes, $grantedScopes);
-        if (!empty($missingScopes)) {
+        if (! empty($missingScopes)) {
             throw new AuthenticationException(
-                'Missing required scopes: ' . implode(', ', $missingScopes),
+                'Missing required scopes: '.implode(', ', $missingScopes),
                 403
             );
         }
@@ -221,7 +224,7 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
      */
     protected function getCacheKey(): string
     {
-        return static::TOKEN_CACHE_PREFIX . $this->clientId . '_' . $this->onBehalfOf;
+        return static::TOKEN_CACHE_PREFIX.$this->clientId.'_'.$this->onBehalfOf;
     }
 
     /**
@@ -229,7 +232,7 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
      */
     protected function shouldUseCache(): bool
     {
-        return parent::shouldUseCache() && null !== $this->onBehalfOf;
+        return parent::shouldUseCache() && $this->onBehalfOf !== null;
     }
 
     /**
@@ -237,7 +240,6 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
      */
     protected function isCurrentTokenValid(): bool
     {
-        return parent::isCurrentTokenValid() && null !== $this->onBehalfOf;
+        return parent::isCurrentTokenValid() && $this->onBehalfOf !== null;
     }
-
 }

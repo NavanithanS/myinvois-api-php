@@ -5,7 +5,8 @@ namespace Nava\MyInvois\Enums;
 /**
  * Notification type identifiers in the MyInvois system.
  */
-enum NotificationTypeEnum: int {
+enum NotificationTypeEnum: int
+{
     case PROFILE_DATA_VALIDATION = 3;
     case DOCUMENT_RECEIVED = 6;
     case DOCUMENT_VALIDATED = 7;
@@ -45,7 +46,7 @@ enum NotificationTypeEnum: int {
      */
     public static function getCodes(): array
     {
-        return array_map(fn($case) => $case->value, self::cases());
+        return array_map(fn ($case) => $case->value, self::cases());
     }
 
     /**
@@ -70,8 +71,9 @@ enum NotificationTypeEnum: int {
 /**
  * Notification status identifiers in the MyInvois system.
  */
-enum NotificationStatusEnum: int {
-    case NEW  = 1;
+enum NotificationStatusEnum: int
+{
+    case NEW = 1;
     case PENDING = 2;
     case BATCHED = 3;
     case DELIVERED = 4;

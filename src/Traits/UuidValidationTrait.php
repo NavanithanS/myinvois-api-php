@@ -19,7 +19,8 @@ trait UuidValidationTrait
      * - Contains only uppercase alphanumeric characters (A-Z, 0-9)
      * - Has valid format for MyInvois system
      *
-     * @param string $uuid UUID to validate
+     * @param  string  $uuid  UUID to validate
+     *
      * @throws ValidationException If UUID format is invalid
      */
     protected function validateUuid(string $uuid): void
@@ -61,7 +62,7 @@ trait UuidValidationTrait
         } catch (\InvalidArgumentException $e) {
             throw new ValidationException(
                 $e->getMessage(),
-                ['uuid' => ['Invalid UUID format: ' . $e->getMessage()]]
+                ['uuid' => ['Invalid UUID format: '.$e->getMessage()]]
             );
         }
     }
@@ -69,8 +70,9 @@ trait UuidValidationTrait
     /**
      * Format a UUID to ensure it meets MyInvois standards.
      *
-     * @param string $uuid UUID to format
+     * @param  string  $uuid  UUID to format
      * @return string Formatted UUID
+     *
      * @throws ValidationException If UUID cannot be formatted correctly
      */
     protected function formatUuid(string $uuid): string
@@ -90,13 +92,14 @@ trait UuidValidationTrait
     /**
      * Check if a string is a valid MyInvois UUID.
      *
-     * @param string $uuid UUID to check
+     * @param  string  $uuid  UUID to check
      * @return bool True if valid, false otherwise
      */
     protected function isValidUuid(string $uuid): bool
     {
         try {
             $this->validateUuid($uuid);
+
             return true;
         } catch (ValidationException $e) {
             return false;
@@ -109,8 +112,9 @@ trait UuidValidationTrait
      * MyInvois UUIDs contain encoded information about the document type
      * in specific character positions.
      *
-     * @param string $uuid Valid UUID to analyze
+     * @param  string  $uuid  Valid UUID to analyze
      * @return string|null Document type code or null if cannot be determined
+     *
      * @throws ValidationException If UUID is invalid
      */
     protected function getDocumentTypeFromUuid(string $uuid): ?string
@@ -133,7 +137,7 @@ trait UuidValidationTrait
     protected function validateUuidVersion(string $uuid): void
     {
         $version = $this->getUuidVersion($uuid);
-        if (!in_array($version, ['1', '4'])) {
+        if (! in_array($version, ['1', '4'])) {
             throw new ValidationException(
                 'Invalid UUID version',
                 ['uuid' => ['UUID must be version 1 or 4']]
@@ -144,7 +148,7 @@ trait UuidValidationTrait
     // Add checksum validation
     protected function validateUuidChecksum(string $uuid): void
     {
-        if (!$this->checksumValid($uuid)) {
+        if (! $this->checksumValid($uuid)) {
             throw new ValidationException(
                 'Invalid UUID checksum',
                 ['uuid' => ['UUID has invalid checksum']]

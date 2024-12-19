@@ -15,25 +15,39 @@ use Webmozart\Assert\Assert;
 class Notification extends DataTransferObject implements JsonSerializable
 {
     public string $notificationId;
+
     public string $receiverName;
+
     public string $notificationDeliveryId;
+
     public DateTimeImmutable $creationDateTime;
+
     public DateTimeImmutable $receivedDateTime;
+
     public string $notificationSubject;
+
     public ?DateTimeImmutable $deliveredDateTime;
+
     public int $typeId;
+
     public string $typeName;
+
     public ?string $finalMessage;
+
     public string $address;
+
     public string $language;
+
     public string $status;
+
     /** @var DeliveryAttempt[] */
     public array $deliveryAttempts;
 
     /**
      * Create a new Notification instance from an array.
      *
-     * @param array $data Raw data from API
+     * @param  array  $data  Raw data from API
+     *
      * @throws \InvalidArgumentException If data validation fails
      */
     public static function fromArray(array $data): self
@@ -74,7 +88,7 @@ class Notification extends DataTransferObject implements JsonSerializable
             'language' => $data['language'],
             'status' => $data['status'],
             'deliveryAttempts' => array_map(
-                fn(array $attempt) => DeliveryAttempt::fromArray($attempt),
+                fn (array $attempt) => DeliveryAttempt::fromArray($attempt),
                 $data['deliveryAttempts']
             ),
         ]);
@@ -116,7 +130,7 @@ class Notification extends DataTransferObject implements JsonSerializable
     public function getStatus(): NotificationStatusEnum
     {
         $statusMap = [
-            'NEW' => NotificationStatusEnum::NEW ,
+            'NEW' => NotificationStatusEnum::NEW,
             'PENDING' => NotificationStatusEnum::PENDING,
             'BATCHED' => NotificationStatusEnum::BATCHED,
             'DELIVERED' => NotificationStatusEnum::DELIVERED,
@@ -154,7 +168,7 @@ class Notification extends DataTransferObject implements JsonSerializable
         return $this->getStatus() === NotificationStatusEnum::ERROR ||
         array_reduce(
             $this->deliveryAttempts,
-            fn(bool $carry, DeliveryAttempt $attempt) => $carry || 'error' === $attempt->status,
+            fn (bool $carry, DeliveryAttempt $attempt) => $carry || $attempt->status === 'error',
             false
         );
     }
@@ -179,7 +193,7 @@ class Notification extends DataTransferObject implements JsonSerializable
             'language' => $this->language,
             'status' => $this->status,
             'deliveryAttempts' => array_map(
-                fn(DeliveryAttempt $attempt) => $attempt->jsonSerialize(),
+                fn (DeliveryAttempt $attempt) => $attempt->jsonSerialize(),
                 $this->deliveryAttempts
             ),
         ];
@@ -192,13 +206,16 @@ class Notification extends DataTransferObject implements JsonSerializable
 class DeliveryAttempt extends DataTransferObject implements JsonSerializable
 {
     public DateTimeImmutable $attemptDateTime;
+
     public string $status;
+
     public ?string $statusDetails;
 
     /**
      * Create a new DeliveryAttempt instance from an array.
      *
-     * @param array $data Raw data from API
+     * @param  array  $data  Raw data from API
+     *
      * @throws \InvalidArgumentException If data validation fails
      */
     public static function fromArray(array $data): self

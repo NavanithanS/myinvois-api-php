@@ -23,8 +23,8 @@ trait DocumentRejectionApi
      * - When the document is in a valid state
      * - When there are no active referencing documents
      *
-     * @param string $documentId The unique ID of the document to reject
-     * @param string $reason Reason for rejecting the document
+     * @param  string  $documentId  The unique ID of the document to reject
+     * @param  string  $reason  Reason for rejecting the document
      * @return array{
      *     uuid: string,
      *     status: string
@@ -53,7 +53,7 @@ trait DocumentRejectionApi
                 ]
             );
 
-            if (!isset($response['uuid']) || !isset($response['status'])) {
+            if (! isset($response['uuid']) || ! isset($response['status'])) {
                 throw new ApiException('Invalid response format from rejection endpoint');
             }
 

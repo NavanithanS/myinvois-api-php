@@ -280,15 +280,16 @@ class CountryValidator
     /**
      * Validate a country code.
      *
-     * @param string $code The country code to validate
+     * @param  string  $code  The country code to validate
      * @return bool True if valid
+     *
      * @throws ValidationException If the code is invalid
      */
     public function validate(string $code): bool
     {
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::COUNTRIES[$code])) {
+        if (! isset(self::COUNTRIES[$code])) {
             throw new ValidationException(
                 'Invalid country code',
                 ['country' => ['Code must be a valid ISO-3166 alpha-3 country code']]
@@ -301,21 +302,23 @@ class CountryValidator
     /**
      * Get the country name for a given code.
      *
-     * @param string $code The country code
+     * @param  string  $code  The country code
      * @return string|null The country name or null if not found
      */
     public function getCountryName(string $code): ?string
     {
         $code = $this->normalizeCode($code);
+
         return self::COUNTRIES[$code] ?? null;
     }
 
     /**
      * Check if a country is in a specific region.
      *
-     * @param string $code The country code
-     * @param string $region The region to check (ASEAN, EU, APAC)
+     * @param  string  $code  The country code
+     * @param  string  $region  The region to check (ASEAN, EU, APAC)
      * @return bool True if the country is in the region
+     *
      * @throws ValidationException If the code or region is invalid
      */
     public function isInRegion(string $code, string $region): bool
@@ -323,10 +326,10 @@ class CountryValidator
         $this->validate($code);
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::REGIONS[$region])) {
+        if (! isset(self::REGIONS[$region])) {
             throw new ValidationException(
                 'Invalid region',
-                ['region' => ['Region must be one of: ' . implode(', ', array_keys(self::REGIONS))]]
+                ['region' => ['Region must be one of: '.implode(', ', array_keys(self::REGIONS))]]
             );
         }
 
@@ -336,9 +339,10 @@ class CountryValidator
     /**
      * Check if a country is a member of a trade agreement.
      *
-     * @param string $code The country code
-     * @param string $agreement The trade agreement to check (RCEP, CPTPP)
+     * @param  string  $code  The country code
+     * @param  string  $agreement  The trade agreement to check (RCEP, CPTPP)
      * @return bool True if the country is a member
+     *
      * @throws ValidationException If the code or agreement is invalid
      */
     public function isInTradeAgreement(string $code, string $agreement): bool
@@ -346,10 +350,10 @@ class CountryValidator
         $this->validate($code);
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::TRADE_AGREEMENTS[$agreement])) {
+        if (! isset(self::TRADE_AGREEMENTS[$agreement])) {
             throw new ValidationException(
                 'Invalid trade agreement',
-                ['agreement' => ['Agreement must be one of: ' . implode(', ', array_keys(self::TRADE_AGREEMENTS))]]
+                ['agreement' => ['Agreement must be one of: '.implode(', ', array_keys(self::TRADE_AGREEMENTS))]]
             );
         }
 
@@ -359,8 +363,9 @@ class CountryValidator
     /**
      * Get validation rules for a country code.
      *
-     * @param string $code The country code
+     * @param  string  $code  The country code
      * @return array Validation rules and membership info
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getValidationRules(string $code): array
@@ -370,19 +375,19 @@ class CountryValidator
 
         $regions = array_keys(array_filter(
             self::REGIONS,
-            fn($members) => in_array($code, $members, true)
+            fn ($members) => in_array($code, $members, true)
         ));
 
         $agreements = array_keys(array_filter(
             self::TRADE_AGREEMENTS,
-            fn($members) => in_array($code, $members, true)
+            fn ($members) => in_array($code, $members, true)
         ));
 
         return [
             'regions' => $regions,
             'trade_agreements' => $agreements,
             'requires_special_documentation' => in_array($code, ['USA', 'CHN', 'RUS'], true),
-            'requires_certificate_origin' => !in_array($code, self::REGIONS['ASEAN'], true),
+            'requires_certificate_origin' => ! in_array($code, self::REGIONS['ASEAN'], true),
             'is_sanctions_list' => in_array($code, ['PRK', 'IRN', 'SYR'], true),
         ];
     }
@@ -390,14 +395,16 @@ class CountryValidator
     /**
      * Format a country code.
      *
-     * @param string $code The code to format
+     * @param  string  $code  The code to format
      * @return string The formatted code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function format(string $code): string
     {
         $normalized = $this->normalizeCode($code);
         $this->validate($normalized);
+
         return $normalized;
     }
 
@@ -414,16 +421,17 @@ class CountryValidator
     /**
      * Get countries in a specific region.
      *
-     * @param string $region The region name
+     * @param  string  $region  The region name
      * @return array<string, string> Array of countries in the region
+     *
      * @throws ValidationException If the region is invalid
      */
     public function getCountriesInRegion(string $region): array
     {
-        if (!isset(self::REGIONS[$region])) {
+        if (! isset(self::REGIONS[$region])) {
             throw new ValidationException(
                 'Invalid region',
-                ['region' => ['Region must be one of: ' . implode(', ', array_keys(self::REGIONS))]]
+                ['region' => ['Region must be one of: '.implode(', ', array_keys(self::REGIONS))]]
             );
         }
 
@@ -436,16 +444,17 @@ class CountryValidator
     /**
      * Get countries in a specific trade agreement.
      *
-     * @param string $agreement The trade agreement name
+     * @param  string  $agreement  The trade agreement name
      * @return array<string, string> Array of countries in the agreement
+     *
      * @throws ValidationException If the agreement is invalid
      */
     public function getCountriesInTradeAgreement(string $agreement): array
     {
-        if (!isset(self::TRADE_AGREEMENTS[$agreement])) {
+        if (! isset(self::TRADE_AGREEMENTS[$agreement])) {
             throw new ValidationException(
                 'Invalid trade agreement',
-                ['agreement' => ['Agreement must be one of: ' . implode(', ', array_keys(self::TRADE_AGREEMENTS))]]
+                ['agreement' => ['Agreement must be one of: '.implode(', ', array_keys(self::TRADE_AGREEMENTS))]]
             );
         }
 
@@ -458,7 +467,7 @@ class CountryValidator
     /**
      * Normalize a country code.
      *
-     * @param string $code The code to normalize
+     * @param  string  $code  The code to normalize
      * @return string The normalized code
      */
     private function normalizeCode(string $code): string

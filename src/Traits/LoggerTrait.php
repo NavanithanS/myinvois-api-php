@@ -47,6 +47,7 @@ trait LoggerTrait
     private function formatLogMessage(string $message, ?string $component = null): string
     {
         $prefix = $component ? "MyInvois {$component}" : 'MyInvois';
+
         return "{$prefix}: {$message}";
     }
 
@@ -63,7 +64,7 @@ trait LoggerTrait
     protected function validateLogLevel(string $level): void
     {
         $validLevels = ['emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug'];
-        if (!in_array(strtolower($level), $validLevels)) {
+        if (! in_array(strtolower($level), $validLevels)) {
             throw new ValidationException('Invalid log level');
         }
     }
@@ -77,7 +78,7 @@ trait LoggerTrait
         $this->validateLogLevel($level);
 
         $structuredContext = array_merge([
-            'timestamp' => (new \DateTimeImmutable())->format('c'),
+            'timestamp' => (new \DateTimeImmutable)->format('c'),
             'client_id' => $this->clientId ?? 'unknown',
             'component' => $component ?? 'unknown',
             'request_id' => $this->getRequestId(),

@@ -3,8 +3,8 @@
 namespace Nava\MyInvois\Tests\Unit\Auth;
 
 use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Cache;
@@ -17,15 +17,18 @@ use Psr\Log\NullLogger;
 class IntermediaryAuthenticationClientTest extends TestCase
 {
     private MockHandler $mockHandler;
+
     private array $container = [];
+
     private IntermediaryAuthenticationClient $client;
+
     private string $validTin = 'C1234567890';
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->mockHandler = new MockHandler();
+        $this->mockHandler = new MockHandler;
         $handlerStack = HandlerStack::create($this->mockHandler);
         $history = Middleware::history($this->container);
         $handlerStack->push($history);
@@ -42,7 +45,7 @@ class IntermediaryAuthenticationClientTest extends TestCase
                 'logging' => ['enabled' => true],
                 'cache' => ['enabled' => true],
             ],
-            logger: new NullLogger()
+            logger: new NullLogger
         );
     }
 

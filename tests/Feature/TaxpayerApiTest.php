@@ -86,7 +86,7 @@ class TaxpayerApiTest extends TestCase
         foreach ($invalidTins as $tin) {
             try {
                 $this->client->validateTaxpayerTin($tin, 'NRIC', '770625015324');
-                $this->fail('Expected ValidationException for invalid TIN: ' . $tin);
+                $this->fail('Expected ValidationException for invalid TIN: '.$tin);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid TIN format', $e->getMessage());
                 $this->assertArrayHasKey('tin', $e->getErrors());
@@ -119,7 +119,7 @@ class TaxpayerApiTest extends TestCase
         foreach ($invalidNrics as $nric) {
             try {
                 $this->client->validateTaxpayerTin('C1234567890', 'NRIC', $nric);
-                $this->fail('Expected ValidationException for invalid NRIC: ' . $nric);
+                $this->fail('Expected ValidationException for invalid NRIC: '.$nric);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid NRIC format', $e->getMessage());
                 $this->assertArrayHasKey('idValue', $e->getErrors());
@@ -141,7 +141,7 @@ class TaxpayerApiTest extends TestCase
         foreach ($invalidPassports as $passport) {
             try {
                 $this->client->validateTaxpayerTin('C1234567890', 'PASSPORT', $passport);
-                $this->fail('Expected ValidationException for invalid passport: ' . $passport);
+                $this->fail('Expected ValidationException for invalid passport: '.$passport);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid passport number format', $e->getMessage());
                 $this->assertArrayHasKey('idValue', $e->getErrors());
@@ -162,7 +162,7 @@ class TaxpayerApiTest extends TestCase
         foreach ($invalidBrns as $brn) {
             try {
                 $this->client->validateTaxpayerTin('C1234567890', 'BRN', $brn);
-                $this->fail('Expected ValidationException for invalid BRN: ' . $brn);
+                $this->fail('Expected ValidationException for invalid BRN: '.$brn);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid BRN format', $e->getMessage());
                 $this->assertArrayHasKey('idValue', $e->getErrors());
@@ -183,7 +183,7 @@ class TaxpayerApiTest extends TestCase
         foreach ($invalidArmyNumbers as $armyNumber) {
             try {
                 $this->client->validateTaxpayerTin('C1234567890', 'ARMY', $armyNumber);
-                $this->fail('Expected ValidationException for invalid army number: ' . $armyNumber);
+                $this->fail('Expected ValidationException for invalid army number: '.$armyNumber);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid army number format', $e->getMessage());
                 $this->assertArrayHasKey('idValue', $e->getErrors());
@@ -243,6 +243,7 @@ class TaxpayerApiTest extends TestCase
         // Verify that ID types were normalized to uppercase in requests
         $requests = array_map(function ($transaction) {
             parse_str($transaction['request']->getUri()->getQuery(), $query);
+
             return $query['idType'];
         }, $this->container);
 

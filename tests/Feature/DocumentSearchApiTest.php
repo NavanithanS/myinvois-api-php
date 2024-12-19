@@ -149,7 +149,7 @@ class DocumentSearchApiTest extends TestCase
                     'submissionDateTo' => '2024-01-31T23:59:59Z',
                     'pageSize' => $pageSize,
                 ]);
-                $this->fail('Expected ValidationException for invalid page size: ' . $pageSize);
+                $this->fail('Expected ValidationException for invalid page size: '.$pageSize);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Page size must be between 1 and 100', $e->getMessage());
             }

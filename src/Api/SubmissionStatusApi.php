@@ -13,16 +13,19 @@ use Webmozart\Assert\Assert;
 trait SubmissionStatusApi
 {
     private const MAX_PAGE_SIZE = 100;
+
     private const MIN_POLL_INTERVAL = 3; // seconds
+
     protected ?LoggerInterface $logger = null;
+
     private array $lastPollTimes = [];
 
     /**
      * Get details of a document submission.
      *
-     * @param string $submissionId Unique submission identifier
-     * @param int|null $pageNo Optional page number
-     * @param int|null $pageSize Optional page size (max 100)
+     * @param  string  $submissionId  Unique submission identifier
+     * @param  int|null  $pageNo  Optional page number
+     * @param  int|null  $pageSize  Optional page size (max 100)
      * @return array{
      *     submissionUid: string,
      *     documentCount: int,
@@ -53,6 +56,7 @@ trait SubmissionStatusApi
      *         createdByUserId: string
      *     }>
      * }
+     *
      * @throws ValidationException If input parameters are invalid
      * @throws ApiException If API request fails
      */
@@ -112,11 +116,11 @@ trait SubmissionStatusApi
      */
     private function validatePaginationParams(?int $pageNo, ?int $pageSize): void
     {
-        if (null !== $pageNo) {
+        if ($pageNo !== null) {
             Assert::greaterThan($pageNo, 0, 'Page number must be greater than 0');
         }
 
-        if (null !== $pageSize) {
+        if ($pageSize !== null) {
             Assert::range($pageSize, 1, self::MAX_PAGE_SIZE,
                 sprintf('Page size must be between 1 and %d', self::MAX_PAGE_SIZE)
             );
@@ -154,11 +158,11 @@ trait SubmissionStatusApi
     {
         $query = [];
 
-        if (null !== $pageNo) {
+        if ($pageNo !== null) {
             $query['pageNo'] = $pageNo;
         }
 
-        if (null !== $pageSize) {
+        if ($pageSize !== null) {
             $query['pageSize'] = $pageSize;
         }
 
@@ -181,7 +185,7 @@ trait SubmissionStatusApi
         ];
 
         foreach ($requiredFields as $field) {
-            if (!isset($response[$field])) {
+            if (! isset($response[$field])) {
                 throw new ApiException("Invalid response format: missing {$field}");
             }
         }
@@ -206,15 +210,15 @@ trait SubmissionStatusApi
         // Log details about failed documents if any
         $failedDocuments = array_filter(
             $response['documentSummary'],
-            fn($doc) => 'invalid' === strtolower($doc['status'])
+            fn ($doc) => strtolower($doc['status']) === 'invalid'
         );
 
-        if (!empty($failedDocuments)) {
+        if (! empty($failedDocuments)) {
             $this->logError('Some documents in submission have failed', [
                 'submissionId' => $submissionId,
                 'failedCount' => count($failedDocuments),
                 'failedDocuments' => array_map(
-                    fn($doc) => [
+                    fn ($doc) => [
                         'uuid' => $doc['uuid'],
                         'internalId' => $doc['internalId'],
                         'status' => $doc['status'],
@@ -231,6 +235,7 @@ trait SubmissionStatusApi
     public function isSubmissionComplete(array $response): bool
     {
         $status = strtolower($response['overallStatus']);
+
         return in_array($status, ['valid', 'partially valid', 'invalid'], true);
     }
 
@@ -258,5 +263,4 @@ trait SubmissionStatusApi
 
         return $allDocuments;
     }
-
 }

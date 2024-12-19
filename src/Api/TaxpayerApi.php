@@ -23,15 +23,18 @@ trait TaxpayerApi
      * Important: This API should be used sparingly and results should be cached by
      * the ERP system to avoid excessive calls. Repeated calls may result in throttling.
      *
-     * @param string $tin Tax Identification Number to validate
-     * @param string $idType Type of secondary ID ('NRIC', 'PASSPORT', 'BRN', 'ARMY')
-     * @param string $idValue Value of the secondary ID
+     * @param  string  $tin  Tax Identification Number to validate
+     * @param  string  $idType  Type of secondary ID ('NRIC', 'PASSPORT', 'BRN', 'ARMY')
+     * @param  string  $idValue  Value of the secondary ID
      * @return bool True if the TIN is valid, false otherwise
+     *
      * @throws ValidationException If the input parameters are invalid
      * @throws ApiException If the API request fails
      */
     private const CACHE_PREFIX = 'myinvois_tin_validation_';
+
     private const CACHE_TTL = 86400; // 24 hours
+
     private const VALID_ID_TYPES = ['NRIC', 'PASSPORT', 'BRN', 'ARMY'];
 
     /**
@@ -40,11 +43,12 @@ trait TaxpayerApi
      * Important: This API should be used sparingly and results should be cached.
      * Repeated calls may result in throttling.
      *
-     * @param string $tin Tax Identification Number to validate
-     * @param string $idType Type of secondary ID ('NRIC', 'PASSPORT', 'BRN', 'ARMY')
-     * @param string $idValue Value of the secondary ID
-     * @param bool $useCache Whether to use cache (default: true)
+     * @param  string  $tin  Tax Identification Number to validate
+     * @param  string  $idType  Type of secondary ID ('NRIC', 'PASSPORT', 'BRN', 'ARMY')
+     * @param  string  $idValue  Value of the secondary ID
+     * @param  bool  $useCache  Whether to use cache (default: true)
      * @return bool True if the TIN is valid, false otherwise
+     *
      * @throws ValidationException If the input parameters are invalid
      * @throws ApiException If the API request fails
      */
@@ -64,12 +68,13 @@ trait TaxpayerApi
                 $cacheKey = $this->getCacheKey($tin, $idType, $idValue);
                 $cachedResult = $this->cache->get($cacheKey);
 
-                if (null !== $cachedResult) {
+                if ($cachedResult !== null) {
                     $this->logDebug('Using cached TIN validation result', [
                         'tin' => $tin,
                         'id_type' => $idType,
                         'cached' => true,
                     ], 'TaxpayerApi');
+
                     return $cachedResult;
                 }
             }
@@ -104,6 +109,7 @@ trait TaxpayerApi
                     'tin' => $tin,
                     'id_type' => $idType,
                 ], 'TaxpayerApi');
+
                 return false;
             }
 
@@ -127,7 +133,7 @@ trait TaxpayerApi
         Assert::notEmpty($tin, 'TIN cannot be empty');
         Assert::length($tin, 11, 'TIN must be exactly 11 characters');
 
-        if (!preg_match('/^C\d{10}$/', $tin)) {
+        if (! preg_match('/^C\d{10}$/', $tin)) {
             throw new ValidationException(
                 'Invalid TIN format',
                 ['tin' => ['TIN must start with C followed by exactly 10 digits']],
@@ -147,10 +153,10 @@ trait TaxpayerApi
 
         $normalizedType = strtoupper(trim($idType));
 
-        if (!in_array($normalizedType, self::VALID_ID_TYPES, true)) {
+        if (! in_array($normalizedType, self::VALID_ID_TYPES, true)) {
             throw new ValidationException(
                 'Invalid ID type',
-                ['idType' => ['ID type must be one of: ' . implode(', ', self::VALID_ID_TYPES)]],
+                ['idType' => ['ID type must be one of: '.implode(', ', self::VALID_ID_TYPES)]],
                 422
             );
         }
@@ -168,7 +174,7 @@ trait TaxpayerApi
         $normalizedType = strtoupper($idType);
         $pattern = self::ID_PATTERNS[$normalizedType] ?? null;
 
-        if (!$pattern || !preg_match($pattern, $idValue)) {
+        if (! $pattern || ! preg_match($pattern, $idValue)) {
             $errorMessages = [
                 'NRIC' => 'NRIC must be 12 digits',
                 'PASSPORT' => 'Passport number must be a letter followed by 8 digits',
@@ -184,9 +190,9 @@ trait TaxpayerApi
         }
 
         // Additional validation for specific types
-        if ('PASSPORT' === $normalizedType) {
+        if ($normalizedType === 'PASSPORT') {
             $letter = substr($idValue, 0, 1);
-            if (!ctype_upper($letter)) {
+            if (! ctype_upper($letter)) {
                 throw new ValidationException(
                     'Invalid passport number format',
                     ['idValue' => ['Passport number must start with an uppercase letter']],
@@ -223,7 +229,7 @@ trait TaxpayerApi
      */
     private function checkRateLimit(): void
     {
-        if (!$this->cache) {
+        if (! $this->cache) {
             return;
         }
 
@@ -257,7 +263,7 @@ trait TaxpayerApi
     /**
      * Get validation pattern for a specific ID type.
      *
-     * @param string $idType The ID type to get pattern for
+     * @param  string  $idType  The ID type to get pattern for
      * @return string|null The regex pattern or null if type is invalid
      */
     public static function getValidationPattern(string $idType): ?string

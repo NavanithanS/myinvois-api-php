@@ -12,10 +12,11 @@ trait DateValidationTrait
     /**
      * Validate a date range if both start and end dates are provided.
      *
-     * @param string|null $fromDate Start date
-     * @param string|null $toDate End date
-     * @param string $fieldName Name of the date field for error messages
-     * @param int $maxDays Maximum allowed days between dates (optional)
+     * @param  string|null  $fromDate  Start date
+     * @param  string|null  $toDate  End date
+     * @param  string  $fieldName  Name of the date field for error messages
+     * @param  int  $maxDays  Maximum allowed days between dates (optional)
+     *
      * @throws ValidationException If date range is invalid
      */
     protected function validateDateRange(
@@ -32,11 +33,11 @@ trait DateValidationTrait
                 if ($from > $to) {
                     throw new ValidationException(
                         "Invalid $fieldName range",
-                        ["{$fieldName}_range" => ["Start date must be before end date"]]
+                        ["{$fieldName}_range" => ['Start date must be before end date']]
                     );
                 }
 
-                if (null !== $maxDays) {
+                if ($maxDays !== null) {
                     $windowLimit = $from->modify("+$maxDays days");
                     if ($to > $windowLimit) {
                         throw new ValidationException(
@@ -61,10 +62,10 @@ trait DateValidationTrait
     // Add ISO 8601 format validation
     private function validateIsoFormat(string $date): void
     {
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $date)) {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $date)) {
             throw new ValidationException(
                 "Invalid date format for {$fieldName}",
-                ["{$fieldName}_format" => ["Date must be in ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ)"]]
+                ["{$fieldName}_format" => ['Date must be in ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ)']]
             );
         }
     }
@@ -75,7 +76,7 @@ trait DateValidationTrait
         if ($timezone->getName() !== 'UTC') {
             throw new ValidationException(
                 "Invalid timezone for {$fieldName}",
-                ["{$fieldName}_timezone" => ["Date must be in UTC timezone"]]
+                ["{$fieldName}_timezone" => ['Date must be in UTC timezone']]
             );
         }
     }

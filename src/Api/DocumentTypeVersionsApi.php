@@ -18,9 +18,9 @@ trait DocumentTypeVersionsApi
     /**
      * Get a specific document type version.
      *
-     * @param int $documentTypeId The document type ID
-     * @param int $versionId The version ID
-     * @return DocumentTypeVersion
+     * @param  int  $documentTypeId  The document type ID
+     * @param  int  $versionId  The version ID
+     *
      * @throws ApiException If the API request fails
      * @throws ValidationException If the input parameters are invalid
      */
@@ -35,7 +35,7 @@ trait DocumentTypeVersionsApi
                 "/api/v1.0/documenttypes/{$documentTypeId}/versions/{$versionId}"
             );
 
-            if (!isset($response['result'])) {
+            if (! isset($response['result'])) {
                 throw new ApiException('Invalid response format from document type version endpoint');
             }
 
@@ -63,9 +63,10 @@ trait DocumentTypeVersionsApi
     /**
      * Find a specific version of a document type by version number.
      *
-     * @param int $documentTypeId The document type ID
-     * @param float $versionNumber The version number to find
+     * @param  int  $documentTypeId  The document type ID
+     * @param  float  $versionNumber  The version number to find
      * @return DocumentTypeVersion|null The version if found, null otherwise
+     *
      * @throws ApiException If the API request fails
      */
     public function findDocumentTypeVersion(int $documentTypeId, float $versionNumber): ?DocumentTypeVersion
@@ -81,6 +82,7 @@ trait DocumentTypeVersionsApi
                         'status' => $version->status,
                         'is_active' => $version->isActive(),
                     ]);
+
                     return $version;
                 }
             }
@@ -89,6 +91,7 @@ trait DocumentTypeVersionsApi
                 'documentTypeId' => $documentTypeId,
                 'versionNumber' => $versionNumber,
             ]);
+
             return null;
         } catch (ApiException $e) {
             if ($e->getCode() === 404) {
@@ -101,8 +104,9 @@ trait DocumentTypeVersionsApi
     /**
      * Get the active versions for a specific document type.
      *
-     * @param int $documentTypeId The document type ID
+     * @param  int  $documentTypeId  The document type ID
      * @return DocumentTypeVersion[]
+     *
      * @throws ApiException If the API request fails
      */
     public function getActiveDocumentTypeVersions(int $documentTypeId): array
@@ -111,7 +115,7 @@ trait DocumentTypeVersionsApi
             $documentType = $this->getDocumentType($documentTypeId);
             $activeVersions = array_filter(
                 $documentType->documentTypeVersions,
-                fn(DocumentTypeVersion $version) => $version->isActive()
+                fn (DocumentTypeVersion $version) => $version->isActive()
             );
 
             $this->logDebug('Retrieved active document type versions', [
@@ -119,7 +123,7 @@ trait DocumentTypeVersionsApi
                 'total_versions' => count($documentType->documentTypeVersions),
                 'active_versions' => count($activeVersions),
                 'version_numbers' => array_map(
-                    fn($v) => $v->versionNumber,
+                    fn ($v) => $v->versionNumber,
                     $activeVersions
                 ),
             ]);
@@ -136,8 +140,9 @@ trait DocumentTypeVersionsApi
     /**
      * Get the latest version for a specific document type.
      *
-     * @param int $documentTypeId The document type ID
+     * @param  int  $documentTypeId  The document type ID
      * @return DocumentTypeVersion|null The latest version if found, null otherwise
+     *
      * @throws ApiException If the API request fails
      */
     public function getLatestDocumentTypeVersion(int $documentTypeId): ?DocumentTypeVersion
@@ -150,8 +155,7 @@ trait DocumentTypeVersionsApi
 
             $latestVersion = array_reduce(
                 $activeVersions,
-                fn($carry, $version) =>
-                null === $carry || $version->versionNumber > $carry->versionNumber
+                fn ($carry, $version) => $carry === null || $version->versionNumber > $carry->versionNumber
                 ? $version
                 : $carry
             );
@@ -174,30 +178,30 @@ trait DocumentTypeVersionsApi
     /**
      * Decode schema content from base64.
      *
-     * @param DocumentTypeVersion $version
-     * @param string $format Either 'json' or 'xml'
+     * @param  string  $format  Either 'json' or 'xml'
      * @return string Decoded schema content
+     *
      * @throws ValidationException If format is invalid or schema is missing
      */
     public function getDocumentTypeVersionSchema(DocumentTypeVersion $version, string $format): string
     {
         Assert::inArray($format, ['json', 'xml'], 'Format must be either "json" or "xml"');
 
-        $schemaField = 'json' === $format ? 'jsonSchema' : 'xmlSchema';
+        $schemaField = $format === 'json' ? 'jsonSchema' : 'xmlSchema';
         $schema = $version->{$schemaField} ?? null;
 
-        if (!$schema) {
+        if (! $schema) {
             throw new ValidationException(
                 "No {$format} schema available for version {$version->versionNumber}",
-                [$format => ["Schema not available"]]
+                [$format => ['Schema not available']]
             );
         }
 
         $decoded = base64_decode($schema, true);
-        if (false === $decoded) {
+        if ($decoded === false) {
             throw new ValidationException(
                 "Invalid base64 encoded {$format} schema",
-                [$format => ["Invalid schema encoding"]]
+                [$format => ['Invalid schema encoding']]
             );
         }
 
@@ -213,9 +217,10 @@ trait DocumentTypeVersionsApi
     /**
      * Validate document type version is supported.
      *
-     * @param string $type Document type (invoice, credit note, debit note)
-     * @param string $version Version number
+     * @param  string  $type  Document type (invoice, credit note, debit note)
+     * @param  string  $version  Version number
      * @return bool True if supported
+     *
      * @throws ValidationException If version is not supported
      */
     private function validateVersion(string $type, string $version): bool
@@ -225,7 +230,7 @@ trait DocumentTypeVersionsApi
             default => throw new ValidationException('Unsupported document type')
         };
 
-        if (!in_array($version, $supportedVersions)) {
+        if (! in_array($version, $supportedVersions)) {
             throw new ValidationException(
                 sprintf('Version %s is not supported for %s notes', $version, $type)
             );
@@ -237,7 +242,7 @@ trait DocumentTypeVersionsApi
     /**
      * Get supported versions for a document type.
      *
-     * @param string $type Document type
+     * @param  string  $type  Document type
      * @return array Supported versions
      */
     public function getSupportedVersions(string $type): array

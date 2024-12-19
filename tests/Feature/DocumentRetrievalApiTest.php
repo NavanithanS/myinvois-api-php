@@ -96,7 +96,7 @@ class DocumentRetrievalApiTest extends TestCase
         foreach ($invalidUuids as $uuid) {
             try {
                 $this->client->getDocument($uuid);
-                $this->fail('Expected ValidationException for invalid UUID: ' . $uuid);
+                $this->fail('Expected ValidationException for invalid UUID: '.$uuid);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString(
                     'UUID must be exactly 15 alphanumeric characters',
@@ -188,7 +188,7 @@ class DocumentRetrievalApiTest extends TestCase
 
         $url = $this->client->getDocumentShareableUrl($uuid, $longId);
 
-        $expectedUrl = MyInvoisClient::SANDBOX_URL . "/{$uuid}/share/{$longId}";
+        $expectedUrl = MyInvoisClient::SANDBOX_URL."/{$uuid}/share/{$longId}";
         $this->assertEquals($expectedUrl, $url);
     }
 
@@ -206,7 +206,7 @@ class DocumentRetrievalApiTest extends TestCase
         foreach ($invalidLongIds as $longId) {
             try {
                 $this->client->getDocumentShareableUrl($uuid, $longId);
-                $this->fail('Expected ValidationException for invalid long ID: ' . $longId);
+                $this->fail('Expected ValidationException for invalid long ID: '.$longId);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid long ID format', $e->getMessage());
             }

@@ -39,19 +39,20 @@ class PaymentMethodValidator
     /**
      * Validate a payment method code.
      *
-     * @param string $code The payment method code to validate
+     * @param  string  $code  The payment method code to validate
      * @return bool True if valid
+     *
      * @throws ValidationException If the code is invalid
      */
     public function validate(string $code): bool
     {
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::PAYMENT_METHODS[$code])) {
+        if (! isset(self::PAYMENT_METHODS[$code])) {
             throw new ValidationException(
                 'Invalid payment method code',
                 ['payment_method' => [
-                    'Code must be one of: ' . implode(', ', array_keys(self::PAYMENT_METHODS)),
+                    'Code must be one of: '.implode(', ', array_keys(self::PAYMENT_METHODS)),
                 ]]
             );
         }
@@ -62,12 +63,13 @@ class PaymentMethodValidator
     /**
      * Get the description for a payment method code.
      *
-     * @param string $code The payment method code
+     * @param  string  $code  The payment method code
      * @return string|null The description or null if not found
      */
     public function getDescription(string $code): ?string
     {
         $code = $this->normalizeCode($code);
+
         return self::PAYMENT_METHODS[$code] ?? null;
     }
 
@@ -84,28 +86,32 @@ class PaymentMethodValidator
     /**
      * Check if a payment method is digital.
      *
-     * @param string $code The payment method code
+     * @param  string  $code  The payment method code
      * @return bool True if digital
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isDigital(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::DIGITAL_METHODS, true);
     }
 
     /**
      * Check if a payment method is a cash equivalent.
      *
-     * @param string $code The payment method code
+     * @param  string  $code  The payment method code
      * @return bool True if cash equivalent
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isCashEquivalent(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::CASH_EQUIVALENT_METHODS, true);
     }
 
@@ -138,22 +144,25 @@ class PaymentMethodValidator
     /**
      * Format a payment method code with leading zero if needed.
      *
-     * @param string $code The code to format
+     * @param  string  $code  The code to format
      * @return string The formatted code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function format(string $code): string
     {
         $normalized = $this->normalizeCode($code);
         $this->validate($normalized);
+
         return $normalized;
     }
 
     /**
      * Parse a payment method code, accepting various formats.
      *
-     * @param string|int $code The code to parse
+     * @param  string|int  $code  The code to parse
      * @return string The normalized code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function parse($code): string
@@ -164,6 +173,7 @@ class PaymentMethodValidator
 
         $normalized = $this->normalizeCode($code);
         $this->validate($normalized);
+
         return $normalized;
     }
 
@@ -173,8 +183,9 @@ class PaymentMethodValidator
      * For example, credit card payments might require last 4 digits,
      * bank transfers might require reference numbers, etc.
      *
-     * @param string $code The payment method code
+     * @param  string  $code  The payment method code
      * @return bool True if additional info is required
+     *
      * @throws ValidationException If the code is invalid
      */
     public function requiresAdditionalInfo(string $code): bool
@@ -198,8 +209,9 @@ class PaymentMethodValidator
     /**
      * Get validation rules for additional information based on payment method.
      *
-     * @param string $code The payment method code
+     * @param  string  $code  The payment method code
      * @return array Validation rules and descriptions
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getAdditionalInfoRules(string $code): array
@@ -255,7 +267,7 @@ class PaymentMethodValidator
     /**
      * Normalize a payment method code.
      *
-     * @param string $code The code to normalize
+     * @param  string  $code  The code to normalize
      * @return string The normalized code
      */
     private function normalizeCode(string $code): string
@@ -266,4 +278,10 @@ class PaymentMethodValidator
         // Ensure 2-digit format with leading zero
         return str_pad($code, 2, '0', STR_PAD_LEFT);
     }
+}
+
+try {
+    $result = $this->client->validateTaxpayerTin('C1234567890', 'NRIC', '770625015324');
+} catch (ValidationException $e) {
+    // Handle validation errors
 }

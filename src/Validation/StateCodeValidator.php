@@ -60,19 +60,20 @@ class StateCodeValidator
     /**
      * Validate a state code.
      *
-     * @param string $code The state code to validate
+     * @param  string  $code  The state code to validate
      * @return bool True if valid
+     *
      * @throws ValidationException If the code is invalid
      */
     public function validate(string $code): bool
     {
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::STATE_CODES[$code])) {
+        if (! isset(self::STATE_CODES[$code])) {
             throw new ValidationException(
                 'Invalid state code',
                 ['state' => [
-                    'Code must be one of: ' . implode(', ', array_keys(self::STATE_CODES)),
+                    'Code must be one of: '.implode(', ', array_keys(self::STATE_CODES)),
                 ]]
             );
         }
@@ -83,19 +84,20 @@ class StateCodeValidator
     /**
      * Get the state name for a given code.
      *
-     * @param string $code The state code
+     * @param  string  $code  The state code
      * @return string|null The state name or null if not found
      */
     public function getStateName(string $code): ?string
     {
         $code = $this->normalizeCode($code);
+
         return self::STATE_CODES[$code] ?? null;
     }
 
     /**
      * Get the state code for a given state name.
      *
-     * @param string $name The state name or alternate name
+     * @param  string  $name  The state name or alternate name
      * @return string|null The state code or null if not found
      */
     public function getStateCode(string $name): ?string
@@ -117,22 +119,25 @@ class StateCodeValidator
     /**
      * Format a state code with leading zero if needed.
      *
-     * @param string $code The code to format
+     * @param  string  $code  The code to format
      * @return string The formatted code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function format(string $code): string
     {
         $normalized = $this->normalizeCode($code);
         $this->validate($normalized);
+
         return $normalized;
     }
 
     /**
      * Parse a state identifier (code or name) into a valid state code.
      *
-     * @param string|int $identifier The state identifier to parse
+     * @param  string|int  $identifier  The state identifier to parse
      * @return string The normalized state code
+     *
      * @throws ValidationException If the identifier is invalid
      */
     public function parse($identifier): string
@@ -149,7 +154,7 @@ class StateCodeValidator
 
         // Try as a state name
         $code = $this->getStateCode($identifier);
-        if (null !== $code) {
+        if ($code !== null) {
             return $code;
         }
 
@@ -162,9 +167,10 @@ class StateCodeValidator
     /**
      * Check if a state is in a specific region.
      *
-     * @param string $code The state code
-     * @param string $region The region to check (PENINSULAR, EAST_MALAYSIA, FEDERAL_TERRITORIES)
+     * @param  string  $code  The state code
+     * @param  string  $region  The region to check (PENINSULAR, EAST_MALAYSIA, FEDERAL_TERRITORIES)
      * @return bool True if the state is in the region
+     *
      * @throws ValidationException If the code or region is invalid
      */
     public function isInRegion(string $code, string $region): bool
@@ -172,10 +178,10 @@ class StateCodeValidator
         $this->validate($code);
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::REGIONS[$region])) {
+        if (! isset(self::REGIONS[$region])) {
             throw new ValidationException(
                 'Invalid region',
-                ['region' => ['Region must be one of: ' . implode(', ', array_keys(self::REGIONS))]]
+                ['region' => ['Region must be one of: '.implode(', ', array_keys(self::REGIONS))]]
             );
         }
 
@@ -185,16 +191,17 @@ class StateCodeValidator
     /**
      * Get all states in a region.
      *
-     * @param string $region The region name
+     * @param  string  $region  The region name
      * @return array<string, string> Array of state codes and names in the region
+     *
      * @throws ValidationException If the region is invalid
      */
     public function getStatesInRegion(string $region): array
     {
-        if (!isset(self::REGIONS[$region])) {
+        if (! isset(self::REGIONS[$region])) {
             throw new ValidationException(
                 'Invalid region',
-                ['region' => ['Region must be one of: ' . implode(', ', array_keys(self::REGIONS))]]
+                ['region' => ['Region must be one of: '.implode(', ', array_keys(self::REGIONS))]]
             );
         }
 
@@ -207,8 +214,9 @@ class StateCodeValidator
     /**
      * Check if a state is a Federal Territory.
      *
-     * @param string $code The state code
+     * @param  string  $code  The state code
      * @return bool True if the state is a Federal Territory
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isFederalTerritory(string $code): bool
@@ -219,8 +227,9 @@ class StateCodeValidator
     /**
      * Check if a state is in East Malaysia.
      *
-     * @param string $code The state code
+     * @param  string  $code  The state code
      * @return bool True if the state is in East Malaysia
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isEastMalaysia(string $code): bool
@@ -231,8 +240,9 @@ class StateCodeValidator
     /**
      * Check if a state is in Peninsular Malaysia.
      *
-     * @param string $code The state code
+     * @param  string  $code  The state code
      * @return bool True if the state is in Peninsular Malaysia
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isPeninsular(string $code): bool
@@ -263,7 +273,7 @@ class StateCodeValidator
     /**
      * Normalize a state code.
      *
-     * @param string $code The code to normalize
+     * @param  string  $code  The code to normalize
      * @return string The normalized code
      */
     private function normalizeCode(string $code): string

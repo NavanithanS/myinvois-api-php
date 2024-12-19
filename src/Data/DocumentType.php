@@ -13,19 +13,26 @@ use Webmozart\Assert\Assert;
 class DocumentType extends DataTransferObject
 {
     public int $id;
+
     public int $invoiceTypeCode;
+
     public string $description;
+
     public DateTimeImmutable $activeFrom;
+
     public ?DateTimeImmutable $activeTo;
+
     /** @var DocumentTypeVersion[] */
     public array $documentTypeVersions;
+
     /** @var WorkflowParameter[] */
     public array $workflowParameters;
 
     /**
      * Create a new DocumentType instance from an array.
      *
-     * @param array $data Raw data from API
+     * @param  array  $data  Raw data from API
+     *
      * @throws \InvalidArgumentException If data validation fails
      */
     public static function fromArray(array $data): self
@@ -38,7 +45,7 @@ class DocumentType extends DataTransferObject
         Assert::isArray($data['documentTypeVersions'], 'Document type versions must be an array');
 
         // Validate invoice type code matches enum
-        $validCodes = array_map(fn($case) => $case->value, DocumentTypeEnum::cases());
+        $validCodes = array_map(fn ($case) => $case->value, DocumentTypeEnum::cases());
         Assert::inArray($data['invoiceTypeCode'], $validCodes, 'Invalid invoice type code');
 
         return new self([
@@ -48,11 +55,11 @@ class DocumentType extends DataTransferObject
             'activeFrom' => new DateTimeImmutable($data['activeFrom']),
             'activeTo' => isset($data['activeTo']) ? new DateTimeImmutable($data['activeTo']) : null,
             'documentTypeVersions' => array_map(
-                fn(array $version) => DocumentTypeVersion::fromArray($version),
+                fn (array $version) => DocumentTypeVersion::fromArray($version),
                 $data['documentTypeVersions']
             ),
             'workflowParameters' => array_map(
-                fn(array $param) => WorkflowParameter::fromArray($param),
+                fn (array $param) => WorkflowParameter::fromArray($param),
                 $data['workflowParameters'] ?? []
             ),
         ]);
@@ -63,8 +70,9 @@ class DocumentType extends DataTransferObject
      */
     public function isActive(): bool
     {
-        $now = new DateTimeImmutable();
-        return $this->activeFrom <= $now && (null === $this->activeTo || $this->activeTo > $now);
+        $now = new DateTimeImmutable;
+
+        return $this->activeFrom <= $now && ($this->activeTo === null || $this->activeTo > $now);
     }
 
     /**
@@ -74,7 +82,7 @@ class DocumentType extends DataTransferObject
      */
     public function getActiveVersions(): array
     {
-        return array_filter($this->documentTypeVersions, fn($version) => $version->isActive());
+        return array_filter($this->documentTypeVersions, fn ($version) => $version->isActive());
     }
 
     /**
@@ -89,7 +97,7 @@ class DocumentType extends DataTransferObject
 
         return array_reduce(
             $activeVersions,
-            fn($carry, $version) => null === $carry || $version->versionNumber > $carry->versionNumber ? $version : $carry
+            fn ($carry, $version) => $carry === null || $version->versionNumber > $carry->versionNumber ? $version : $carry
         );
     }
 
@@ -103,6 +111,7 @@ class DocumentType extends DataTransferObject
                 return $param;
             }
         }
+
         return null;
     }
 
@@ -113,7 +122,7 @@ class DocumentType extends DataTransferObject
      */
     public function getActiveWorkflowParameters(): array
     {
-        return array_filter($this->workflowParameters, fn($param) => $param->isActive());
+        return array_filter($this->workflowParameters, fn ($param) => $param->isActive());
     }
 
     /**

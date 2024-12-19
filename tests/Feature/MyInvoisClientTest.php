@@ -3,8 +3,8 @@
 namespace Nava\MyInvois\Tests\Feature;
 
 use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Handler\MockHandler;
+use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
@@ -16,7 +16,9 @@ use Orchestra\Testbench\TestCase;
 class MyInvoisClientTest extends TestCase
 {
     protected MockHandler $mockHandler;
+
     protected array $container = [];
+
     protected MyInvoisClient $client;
 
     protected function setUp(): void
@@ -24,7 +26,7 @@ class MyInvoisClientTest extends TestCase
         parent::setUp();
 
         // Create a new mock handler
-        $this->mockHandler = new MockHandler();
+        $this->mockHandler = new MockHandler;
 
         // Create a handler stack with the mock
         $handlerStack = HandlerStack::create($this->mockHandler);
@@ -311,7 +313,7 @@ class MyInvoisClientTest extends TestCase
     }
 
     /** @test */
-    public function testSubmitRefundNoteWithVersion(): void
+    public function test_submit_refund_note_with_version(): void
     {
         $this->mockSuccessfulAuthentication();
 
@@ -339,7 +341,7 @@ class MyInvoisClientTest extends TestCase
     }
 
     /** @test */
-    public function testSubmitRefundNoteWithInvalidVersion(): void
+    public function test_submit_refund_note_with_invalid_version(): void
     {
         $this->expectException(ValidationException::class);
         $this->expectExceptionMessage('Unsupported refund note version');

@@ -17,13 +17,15 @@ trait DocumentSearchApi
     use DateValidationTrait;
 
     protected ?LoggerInterface $logger = null;
+
     private const MAX_PAGE_SIZE = 100;
 
     /**
      * Search for documents.
      *
-     * @param array $filters Search filters
+     * @param  array  $filters  Search filters
      * @return array Search results
+     *
      * @throws ValidationException|ApiException
      */
     public function searchDocuments(array $filters = []): array
@@ -43,7 +45,7 @@ trait DocumentSearchApi
                 ['query' => $query]
             );
 
-            if (!isset($response['result']) || !isset($response['metadata'])) {
+            if (! isset($response['result']) || ! isset($response['metadata'])) {
                 throw new ApiException('Invalid response format from search endpoint');
             }
 
@@ -76,7 +78,7 @@ trait DocumentSearchApi
                 $filters['pageSize'],
                 1,
                 self::MAX_PAGE_SIZE,
-                'Page size must be between 1 and ' . self::MAX_PAGE_SIZE
+                'Page size must be between 1 and '.self::MAX_PAGE_SIZE
             );
         }
 

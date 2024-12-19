@@ -19,7 +19,7 @@ class MyInvoisServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(
-            __DIR__ . '/../../config/myinvois.php',
+            __DIR__.'/../../config/myinvois.php',
             'myinvois'
         );
 
@@ -37,7 +37,7 @@ class MyInvoisServiceProvider extends ServiceProvider
 
         // Register Client Factory
         $this->app->singleton(MyInvoisClientFactoryInterface::class, function ($app) {
-            return new MyInvoisClientFactory();
+            return new MyInvoisClientFactory;
         });
 
         // Register Main Client
@@ -53,7 +53,7 @@ class MyInvoisServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__ . '/../../config/myinvois.php' => config_path('myinvois.php'),
+                __DIR__.'/../../config/myinvois.php' => config_path('myinvois.php'),
             ], 'myinvois-config');
         }
     }

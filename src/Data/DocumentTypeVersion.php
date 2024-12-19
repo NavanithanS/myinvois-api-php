@@ -15,17 +15,24 @@ class DocumentTypeVersion extends DataTransferObject implements JsonSerializable
     private const VALID_STATUSES = ['draft', 'published', 'deactivated'];
 
     public int $id;
+
     public string $name;
+
     public string $description;
+
     public DateTimeImmutable $activeFrom;
+
     public ?DateTimeImmutable $activeTo;
+
     public float $versionNumber;
+
     public string $status;
 
     /**
      * Create a new DocumentTypeVersion instance from an array.
      *
-     * @param array $data Raw data from API
+     * @param  array  $data  Raw data from API
+     *
      * @throws \InvalidArgumentException
      */
     public static function fromArray(array $data): self
@@ -63,10 +70,10 @@ class DocumentTypeVersion extends DataTransferObject implements JsonSerializable
      */
     public function isActive(): bool
     {
-        $now = new DateTimeImmutable();
+        $now = new DateTimeImmutable;
 
-        return 'published' === $this->status && $this->activeFrom <= $now
-            && (null === $this->activeTo || $this->activeTo > $now);
+        return $this->status === 'published' && $this->activeFrom <= $now
+            && ($this->activeTo === null || $this->activeTo > $now);
     }
 
     /**

@@ -87,19 +87,20 @@ class ClassificationValidator
     /**
      * Validate a classification code.
      *
-     * @param string $code The classification code to validate
+     * @param  string  $code  The classification code to validate
      * @return bool True if valid
+     *
      * @throws ValidationException If the code is invalid
      */
     public function validate(string $code): bool
     {
         $code = $this->normalizeCode($code);
 
-        if (!isset(self::CLASSIFICATIONS[$code])) {
+        if (! isset(self::CLASSIFICATIONS[$code])) {
             throw new ValidationException(
                 'Invalid classification code',
                 ['classification' => [
-                    'Code must be one of: ' . implode(', ', array_keys(self::CLASSIFICATIONS)),
+                    'Code must be one of: '.implode(', ', array_keys(self::CLASSIFICATIONS)),
                 ]]
             );
         }
@@ -110,76 +111,86 @@ class ClassificationValidator
     /**
      * Get the description for a classification code.
      *
-     * @param string $code The classification code
+     * @param  string  $code  The classification code
      * @return string|null The description or null if not found
      */
     public function getDescription(string $code): ?string
     {
         $code = $this->normalizeCode($code);
+
         return self::CLASSIFICATIONS[$code] ?? null;
     }
 
     /**
      * Check if a classification requires special documentation.
      *
-     * @param string $code The classification code
+     * @param  string  $code  The classification code
      * @return bool True if documentation is required
+     *
      * @throws ValidationException If the code is invalid
      */
     public function requiresDocumentation(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::REQUIRES_DOCUMENTATION, true);
     }
 
     /**
      * Check if a classification is self-billed.
      *
-     * @param string $code The classification code
+     * @param  string  $code  The classification code
      * @return bool True if self-billed
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isSelfBilled(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::SELF_BILLED, true);
     }
 
     /**
      * Check if a classification is medical related.
      *
-     * @param string $code The classification code
+     * @param  string  $code  The classification code
      * @return bool True if medical related
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isMedicalRelated(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::MEDICAL_RELATED, true);
     }
 
     /**
      * Check if a classification is tax deductible.
      *
-     * @param string $code The classification code
+     * @param  string  $code  The classification code
      * @return bool True if tax deductible
+     *
      * @throws ValidationException If the code is invalid
      */
     public function isTaxDeductible(string $code): bool
     {
         $this->validate($code);
         $code = $this->normalizeCode($code);
+
         return in_array($code, self::TAX_DEDUCTIBLE, true);
     }
 
     /**
      * Get validation rules for a classification.
      *
-     * @param string $code The classification code
+     * @param  string  $code  The classification code
      * @return array Validation rules and requirements
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getValidationRules(string $code): array
@@ -192,7 +203,7 @@ class ClassificationValidator
             'is_self_billed' => $this->isSelfBilled($code),
             'is_medical_related' => $this->isMedicalRelated($code),
             'is_tax_deductible' => $this->isTaxDeductible($code),
-            'requires_amount' => !in_array($code, ['004', '007', '022'], true),
+            'requires_amount' => ! in_array($code, ['004', '007', '022'], true),
             'requires_recipient_details' => in_array($code, ['007', '037', '045'], true),
             'requires_registration_number' => $this->requiresDocumentation($code),
         ];
@@ -201,8 +212,9 @@ class ClassificationValidator
     /**
      * Get required documentation types for a classification.
      *
-     * @param string $code The classification code
+     * @param  string  $code  The classification code
      * @return array List of required documentation types
+     *
      * @throws ValidationException If the code is invalid
      */
     public function getRequiredDocumentation(string $code): array
@@ -210,7 +222,7 @@ class ClassificationValidator
         $this->validate($code);
         $code = $this->normalizeCode($code);
 
-        if (!$this->requiresDocumentation($code)) {
+        if (! $this->requiresDocumentation($code)) {
             return [];
         }
 
@@ -228,22 +240,25 @@ class ClassificationValidator
     /**
      * Format a classification code.
      *
-     * @param string $code The code to format
+     * @param  string  $code  The code to format
      * @return string The formatted code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function format(string $code): string
     {
         $normalized = $this->normalizeCode($code);
         $this->validate($normalized);
+
         return $normalized;
     }
 
     /**
      * Parse a classification code.
      *
-     * @param string|int $code The code to parse
+     * @param  string|int  $code  The code to parse
      * @return string The normalized code
+     *
      * @throws ValidationException If the code is invalid
      */
     public function parse($code): string
@@ -254,6 +269,7 @@ class ClassificationValidator
 
         $normalized = $this->normalizeCode($code);
         $this->validate($normalized);
+
         return $normalized;
     }
 
@@ -322,7 +338,7 @@ class ClassificationValidator
     /**
      * Normalize a classification code.
      *
-     * @param string $code The code to normalize
+     * @param  string  $code  The code to normalize
      * @return string The normalized code
      */
     private function normalizeCode(string $code): string

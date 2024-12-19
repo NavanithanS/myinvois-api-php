@@ -224,11 +224,11 @@ class NotificationTypeEnumTest extends TestCase
         $this->assertCount(11, $cases);
 
         // Verify each case is unique
-        $uniqueCases = array_unique(array_map(fn($case) => $case->value, $cases));
+        $uniqueCases = array_unique(array_map(fn ($case) => $case->value, $cases));
         $this->assertCount(11, $uniqueCases);
 
         // Verify each case has a unique description
-        $descriptions = array_map(fn($case) => $case->description(), $cases);
+        $descriptions = array_map(fn ($case) => $case->description(), $cases);
         $uniqueDescriptions = array_unique($descriptions);
         $this->assertCount(11, $uniqueDescriptions);
     }
