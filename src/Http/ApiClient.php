@@ -71,9 +71,9 @@ class ApiClient
 
             $this->logRequest($method, $endpoint, $options);
 
-            return $this->httpClient->requestAsync($method, $this->baseUrl.$endpoint, $options)
+            return $this->httpClient->requestAsync($method, $this->baseUrl . $endpoint, $options)
                 ->then(
-                    fn (ResponseInterface $response) => $this->handleResponse($response),
+                    fn(ResponseInterface $response) => $this->handleResponse($response),
                     function (RequestException $exception) use ($method, $endpoint, $options) {
                         if ($this->shouldRetry($exception)) {
                             return $this->retryRequest($method, $endpoint, $options);
@@ -83,7 +83,7 @@ class ApiClient
                     }
                 );
         } catch (\Throwable $e) {
-            throw new ApiException('Unexpected error occurred: '.$e->getMessage(), 0, $e);
+            throw new ApiException('Unexpected error occurred: ' . $e->getMessage(), 0, $e);
         }
     }
 
@@ -94,7 +94,7 @@ class ApiClient
      */
     private function authenticateIfNeeded(): void
     {
-        $tokenNeedsRefresh = ! $this->accessToken ||
+        $tokenNeedsRefresh = !$this->accessToken ||
             (($this->tokenExpires ?? 0) - time()) <= ($this->config['auth']['token_refresh_buffer'] ?? 300);
 
         if ($tokenNeedsRefresh) {
@@ -104,7 +104,7 @@ class ApiClient
                 $this->tokenExpires = time() + ($authResponse['expires_in'] ?? 3600);
             } catch (\Throwable $e) {
                 throw new AuthenticationException(
-                    'Failed to authenticate with API: '.$e->getMessage(),
+                    'Failed to authenticate with API: ' . $e->getMessage(),
                     0,
                     $e
                 );
@@ -165,9 +165,9 @@ class ApiClient
     private function handleRequestException(RequestException $e): never
     {
         $response = $e->getResponse();
-        if (! $response) {
+        if (!$response) {
             throw new NetworkException(
-                'Network error occurred: '.$e->getMessage(),
+                'Network error occurred: ' . $e->getMessage(),
                 0,
                 $e
             );
@@ -202,6 +202,8 @@ class ApiClient
             case 429:
                 throw new ApiException('Rate limit exceeded', 429, $e);
             default:
+                $responseData = json_decode($response->getBody()->getContents(), true);
+                $message = isset($responseData['error']) ? (is_array($responseData['error']) ? json_encode($responseData['error']) : $responseData['error']) : $response->getReasonPhrase();
                 throw new ApiException($message, $statusCode, $e);
         }
     }
@@ -211,18 +213,18 @@ class ApiClient
      */
     private function shouldRetry(RequestException $e): bool
     {
-        if (! ($this->config['http']['retry']['enabled'] ?? true)) {
+        if (!($this->config['http']['retry']['enabled'] ?? true)) {
             return false;
         }
 
         $response = $e->getResponse();
-        if (! $response) {
+        if (!$response) {
             return true; // Retry network errors
         }
 
         $statusCode = $response->getStatusCode();
 
-        return $statusCode === 429 || $statusCode >= 500;
+        return 429 === $statusCode || $statusCode >= 500;
     }
 
     /**
@@ -271,7 +273,7 @@ class ApiClient
      */
     private function logRequest(string $method, string $endpoint, array $options): void
     {
-        if (! ($this->config['logging']['enabled'] ?? false)) {
+        if (!($this->config['logging']['enabled'] ?? false)) {
             return;
         }
 
@@ -292,7 +294,7 @@ class ApiClient
      */
     private function logResponse(ResponseInterface $response, array $data): void
     {
-        if (! ($this->config['logging']['enabled'] ?? false)) {
+        if (!($this->config['logging']['enabled'] ?? false)) {
             return;
         }
 
