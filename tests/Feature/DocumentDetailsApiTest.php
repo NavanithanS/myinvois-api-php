@@ -2,6 +2,8 @@
 
 namespace Nava\MyInvois\Tests\Feature;
 
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use Nava\MyInvois\Exception\ApiException;
 use Nava\MyInvois\Exception\ValidationException;
@@ -101,7 +103,7 @@ class DocumentDetailsApiTest extends TestCase
         foreach ($invalidUuids as $uuid) {
             try {
                 $this->client->getDocumentDetails($uuid);
-                $this->fail('Expected ValidationException for invalid UUID: '.$uuid);
+                $this->fail('Expected ValidationException for invalid UUID: ' . $uuid);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid UUID format', $e->getMessage());
             }
@@ -191,16 +193,41 @@ class DocumentDetailsApiTest extends TestCase
     /** @test */
     public function it_can_generate_document_public_url(): void
     {
+        $this->mockSuccessfulAuthentication();
+
         $uuid = 'F9D425P6DS7D8IU';
         $longId = 'LIJAF97HJJKH8298KHADH09908570FDKK9S2LSIUHB377373';
         $baseUrl = 'https://myinvois.hasil.gov.my';
 
+        // Mock API response for the document details
+        $this->mockHandler->append(
+            new Response(200, [], json_encode([
+                'uuid' => $uuid,
+                'longId' => $longId,
+                'typeName' => 'invoice',
+                'typeVersionName' => '1.0',
+                'issuerTin' => 'C2584563200',
+                'issuerName' => 'Test Company Sdn. Bhd.',
+                'dateTimeIssued' => '2024-12-23T10:00:00Z',
+                'dateTimeReceived' => '2024-12-23T10:05:00Z',
+                'totalExcludingTax' => '1000.00',
+                'totalDiscount' => '100.00',
+                'totalNetAmount' => '900.00',
+                'totalPayableAmount' => '954.00',
+                'status' => 'Valid',
+                'createdByUserId' => 'test@example.com',
+            ]))
+        );
+
+        // Create a new client instance with the desired base URL
         $this->client = new \Nava\MyInvois\MyInvoisClient(
             clientId: 'test_client',
             clientSecret: 'test_secret',
             baseUrl: $baseUrl,
+            cache: $this->app['cache']->store(),
+            httpClient: new GuzzleClient(['handler' => HandlerStack::create($this->mockHandler)]),
             config: [
-                'http' => ['client' => $this->httpClient],
+                'base_url' => $baseUrl,
             ]
         );
 
@@ -225,7 +252,7 @@ class DocumentDetailsApiTest extends TestCase
         foreach ($invalidLongIds as $longId) {
             try {
                 $this->client->generateDocumentPublicUrl($this->validUuid, $longId);
-                $this->fail('Expected ValidationException for invalid long ID: '.$longId);
+                $this->fail('Expected ValidationException for invalid long ID: ' . $longId);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString('Invalid long ID format', $e->getMessage());
             }

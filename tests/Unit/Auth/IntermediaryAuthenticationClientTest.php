@@ -3,31 +3,26 @@
 namespace Nava\MyInvois\Tests\Unit\Auth;
 
 use GuzzleHttp\Client as GuzzleClient;
-use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Middleware;
-use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Cache;
 use Nava\MyInvois\Auth\IntermediaryAuthenticationClient;
-use Nava\MyInvois\Exception\AuthenticationException;
-use Nava\MyInvois\Exception\ValidationException;
+use Nava\MyInvois\MyInvoisClient;
 use Nava\MyInvois\Tests\TestCase;
 use Psr\Log\NullLogger;
 
 class IntermediaryAuthenticationClientTest extends TestCase
 {
-    private MockHandler $mockHandler;
-
-    private array $container = [];
-
-    private IntermediaryAuthenticationClient $client;
-
-    private string $validTin = 'C1234567890';
+    protected MockHandler $mockHandler;
+    protected array $container = [];
+    protected MyInvoisClient $client; // Match parent class type
+    protected string $validTin = 'C1234567890';
+    protected array $validResponse;
 
     protected function setUp(): void
     {
-        parent::setUp();
-
+        // Don't call parent::setUp() since we need a different client setup
         $this->mockHandler = new MockHandler;
         $handlerStack = HandlerStack::create($this->mockHandler);
         $history = Middleware::history($this->container);
@@ -35,7 +30,8 @@ class IntermediaryAuthenticationClientTest extends TestCase
 
         $httpClient = new GuzzleClient(['handler' => $handlerStack]);
 
-        $this->client = new IntermediaryAuthenticationClient(
+        // Create intermediary authentication client
+        $authClient = new IntermediaryAuthenticationClient(
             clientId: 'test_client',
             clientSecret: 'test_secret',
             baseUrl: 'https://test.myinvois.com',
@@ -46,6 +42,20 @@ class IntermediaryAuthenticationClientTest extends TestCase
                 'cache' => ['enabled' => true],
             ],
             logger: new NullLogger
+        );
+
+        // Create MyInvois client with the intermediary auth client
+        $this->client = new MyInvoisClient(
+            clientId: 'test_client',
+            clientSecret: 'test_secret',
+            baseUrl: 'https://test.myinvois.com',
+            cache: Cache::store(),
+            httpClient: $httpClient,
+            config: [
+                'auth' => [
+                    'client' => $authClient,
+                ],
+            ]
         );
     }
 
@@ -304,4 +314,5 @@ class IntermediaryAuthenticationClientTest extends TestCase
         $this->assertNotEquals($token1['access_token'], $token2['access_token']);
         $this->assertCount(2, $this->container);
     }
+
 }

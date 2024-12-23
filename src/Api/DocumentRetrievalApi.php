@@ -67,7 +67,7 @@ trait DocumentRetrievalApi
                 "/api/v1.0/documents/{$uuid}/raw"
             );
 
-            if (! isset($response['uuid'])) {
+            if (!isset($response['uuid'])) {
                 throw new ApiException('Invalid response format from document endpoint');
             }
 
@@ -102,7 +102,7 @@ trait DocumentRetrievalApi
         Assert::notEmpty($longId, 'Long ID cannot be empty');
         Assert::regex($longId, '/^[A-Z0-9\s]{40,}$/', 'Invalid long ID format');
 
-        $baseUrl = rtrim($this->baseUrl, '/');
+        $baseUrl = rtrim($this->config['base_url'] ?? '', '/');
 
         return "{$baseUrl}/{$uuid}/share/{$longId}";
     }
