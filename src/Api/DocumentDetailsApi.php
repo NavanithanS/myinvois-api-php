@@ -55,7 +55,7 @@ trait DocumentDetailsApi
 
             $response = $this->apiClient->request('GET', "/api/v1.0/documents/{$uuid}/details");
 
-            if (! isset($response['uuid'])) {
+            if (!isset($response['uuid'])) {
                 throw new ApiException('Invalid response format from document details endpoint');
             }
 
@@ -123,7 +123,11 @@ trait DocumentDetailsApi
     public function generateDocumentPublicUrl(string $uuid, string $longId): string
     {
         $this->validateUuid($uuid);
-        Assert::notEmpty($longId, 'Long ID cannot be empty');
+
+        if (empty($longId)) {
+            throw new ValidationException('Long ID cannot be empty');
+        }
+
         Assert::regex($longId, '/^[A-Z0-9\s]{32,}$/', 'Invalid long ID format');
 
         $baseUrl = rtrim($this->config['base_url'] ?? '', '/');
@@ -191,7 +195,7 @@ trait DocumentDetailsApi
 
         } catch (\Throwable $e) {
             throw new ApiException(
-                'Failed to map document details: '.$e->getMessage(),
+                'Failed to map document details: ' . $e->getMessage(),
                 0,
                 $e
             );
