@@ -12,12 +12,14 @@ use Nava\MyInvois\Exception\AuthenticationException;
 use Nava\MyInvois\Exception\NetworkException;
 use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Traits\LoggerTrait;
+use Nava\MyInvois\Traits\RateLimitingTrait;
 use Psr\Log\LoggerInterface;
 use Webmozart\Assert\Assert;
 
 class AuthenticationClient implements AuthenticationClientInterface
 {
     use LoggerTrait;
+    use RateLimitingTrait;
 
     protected const TOKEN_ENDPOINT = '/connect/token';
 

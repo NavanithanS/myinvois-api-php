@@ -7,6 +7,7 @@ use Nava\MyInvois\Enums\DocumentFormat;
 use Nava\MyInvois\Enums\DocumentTypeEnum;
 use Nava\MyInvois\Exception\ApiException;
 use Nava\MyInvois\Exception\ValidationException;
+use Nava\MyInvois\Traits\RateLimitingTrait;
 use Psr\Log\LoggerInterface;
 use Webmozart\Assert\Assert;
 
