@@ -18,6 +18,7 @@ trait DocumentRetrievalApi
     protected ?LoggerInterface $logger = null;
 
     use UuidValidationTrait;
+    use DateValidationTrait;
 
     /**
      * Get a document by its unique ID.
@@ -123,7 +124,7 @@ trait DocumentRetrievalApi
 
         foreach ($dateFields as $field) {
             if (isset($response[$field])) {
-                $response[$field] = new DateTimeImmutable($response[$field]);
+                $response[$field] = $this->parseDate($response[$field]);
             }
         }
 
