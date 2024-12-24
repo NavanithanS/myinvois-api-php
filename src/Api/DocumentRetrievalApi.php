@@ -6,6 +6,7 @@ use DateTimeImmutable;
 use Nava\MyInvois\Data\Document;
 use Nava\MyInvois\Exception\ApiException;
 use Nava\MyInvois\Exception\ValidationException;
+use Nava\MyInvois\Traits\DateValidationTrait;
 use Nava\MyInvois\Traits\UuidValidationTrait;
 use Psr\Log\LoggerInterface;
 use Webmozart\Assert\Assert;
