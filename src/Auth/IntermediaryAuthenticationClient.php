@@ -8,11 +8,14 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Nava\MyInvois\Contracts\IntermediaryAuthenticationClientInterface;
 use Nava\MyInvois\Exception\AuthenticationException;
 use Nava\MyInvois\Exception\ValidationException;
+use Nava\MyInvois\Traits\RateLimitingTrait;
 use Psr\Log\LoggerInterface;
 use Webmozart\Assert\Assert;
 
 class IntermediaryAuthenticationClient extends AuthenticationClient implements IntermediaryAuthenticationClientInterface
 {
+    use RateLimitingTrait;
+
     protected const TOKEN_CACHE_PREFIX = 'myinvois_intermediary_token_';
 
     protected const TIN_PATTERN = '/^C\d{10}$/';
