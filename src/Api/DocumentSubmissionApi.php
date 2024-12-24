@@ -15,6 +15,8 @@ use Webmozart\Assert\Assert;
  */
 trait DocumentSubmissionApi
 {
+    use RateLimitingTrait;
+
     protected ?LoggerInterface $logger = null;
 
     private const MAX_SUBMISSION_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -49,8 +51,8 @@ trait DocumentSubmissionApi
 
         while ($attempt < $maxRetries) {
             try {
-                $this->validateSubmission($documents);
                 $this->checkRateLimit('submission');
+                $this->validateSubmission($documents);
 
                 $this->logDebug('Starting document submission', [
                     'attempt' => $attempt + 1,
@@ -59,7 +61,7 @@ trait DocumentSubmissionApi
                 ]);
 
                 $preparedDocuments = array_map(
-                    fn (array $doc) => $this->prepareDocument($doc, $format),
+                    fn(array $doc) => $this->prepareDocument($doc, $format),
                     $documents
                 );
 
@@ -75,7 +77,7 @@ trait DocumentSubmissionApi
 
             } catch (ApiException $e) {
                 $lastException = $e;
-                if (! $this->isRetryableError($e)) {
+                if (!$this->isRetryableError($e)) {
                     throw $e;
                 }
                 $attempt++;
@@ -99,11 +101,15 @@ trait DocumentSubmissionApi
      */
     public function submitDocument(array $document, ?string $version = null): array
     {
+        $this->checkRateLimit('document_submission',
+            $this->createRateLimitConfig('submitDocument', 50, 3600)
+        );
+
         // Use provided version or current version
         $version = $version ?? Config::INVOICE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (! Config::isVersionSupported('invoice', $version)) {
+        if (!Config::isVersionSupported('invoice', $version)) {
             throw new ValidationException('Unsupported document version');
         }
 
@@ -136,7 +142,7 @@ trait DocumentSubmissionApi
     ): array {
         // Validate document type consistency
         foreach ($documents as $document) {
-            if (! isset($document['documentType']) || $document['documentType'] !== $documentType->value) {
+            if (!isset($document['documentType']) || $document['documentType'] !== $documentType->value) {
                 throw new ValidationException(
                     'All documents in batch must be of the same type',
                     ['documentType' => ['Inconsistent document types in batch']]
@@ -206,7 +212,7 @@ trait DocumentSubmissionApi
         }
 
         // Validate code number format
-        if (! preg_match('/^[A-Za-z0-9-]+$/', $document['codeNumber'])) {
+        if (!preg_match('/^[A-Za-z0-9-]+$/', $document['codeNumber'])) {
             throw new ValidationException(
                 sprintf('Invalid code number format for document %s', $document['codeNumber']),
                 ['codeNumber' => ['Code number can only contain letters, numbers, and hyphens']]
@@ -214,7 +220,7 @@ trait DocumentSubmissionApi
         }
 
         // Validate hash format (SHA-256)
-        if (! preg_match('/^[A-Fa-f0-9]{64}$/', $document['documentHash'])) {
+        if (!preg_match('/^[A-Fa-f0-9]{64}$/', $document['documentHash'])) {
             throw new ValidationException(
                 sprintf('Invalid hash format for document %s', $document['codeNumber']),
                 ['documentHash' => ['Document hash must be a valid SHA-256 hash']]
@@ -256,9 +262,9 @@ trait DocumentSubmissionApi
     {
         // Minify document content if JSON/XML
         $content = $document['document'];
-        if ($format === DocumentFormat::JSON) {
+        if (DocumentFormat::JSON === $format) {
             $content = $this->minifyJson($content);
-        } elseif ($format === DocumentFormat::XML) {
+        } elseif (DocumentFormat::XML === $format) {
             $content = $this->minifyXml($content);
         }
 
@@ -295,7 +301,7 @@ trait DocumentSubmissionApi
         $doc->preserveWhiteSpace = false;
         $doc->formatOutput = false;
 
-        if (! @$doc->loadXML($xml)) {
+        if (!@$doc->loadXML($xml)) {
             throw new ValidationException(
                 'Invalid XML content',
                 ['document' => ['Document content must be valid XML']]
@@ -312,7 +318,7 @@ trait DocumentSubmissionApi
     {
         return array_reduce(
             $documents,
-            fn (int $total, array $doc) => $total + strlen($doc['document']),
+            fn(int $total, array $doc) => $total + strlen($doc['document']),
             0
         );
     }
@@ -411,7 +417,7 @@ trait DocumentSubmissionApi
         $version = $version ?? Config::CREDIT_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (! Config::isVersionSupported('credit_note', $version)) {
+        if (!Config::isVersionSupported('credit_note', $version)) {
             throw new ValidationException('Unsupported credit note version');
         }
 
@@ -431,7 +437,7 @@ trait DocumentSubmissionApi
         $version = $version ?? Config::DEBIT_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (! Config::isVersionSupported('debit_note', $version)) {
+        if (!Config::isVersionSupported('debit_note', $version)) {
             throw new ValidationException('Unsupported debit note version');
         }
 

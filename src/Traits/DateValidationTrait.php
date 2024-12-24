@@ -2,81 +2,139 @@
 
 namespace Nava\MyInvois\Traits;
 
+use DateTimeImmutable;
+use DateTimeInterface;
+use Exception;
 use Nava\MyInvois\Exception\ValidationException;
 
-/**
- * Common trait for date validation functionality.
- */
 trait DateValidationTrait
 {
     /**
-     * Validate a date range if both start and end dates are provided.
+     * Robustly parse a date string into a DateTimeImmutable.
      *
-     * @param  string|null  $fromDate  Start date
-     * @param  string|null  $toDate  End date
-     * @param  string  $fieldName  Name of the date field for error messages
-     * @param  int  $maxDays  Maximum allowed days between dates (optional)
+     * @param string|DateTimeInterface|null $date Date to parse
+     * @param bool $required Whether the date is required
+     * @return DateTimeImmutable|null Parsed date
+     *
+     * @throws \InvalidArgumentException If date is invalid and required
+     */
+    protected function parseDate(
+        string | DateTimeInterface | null $date,
+        bool $required = false
+    ): ?DateTimeImmutable {
+        // If date is already a DateTimeInterface, convert to DateTimeImmutable
+        if ($date instanceof DateTimeInterface) {
+            return DateTimeImmutable::createFromInterface($date);
+        }
+
+        // If date is null and not required, return null
+        if (null === $date) {
+            if ($required) {
+                throw new \InvalidArgumentException('Date is required');
+            }
+            return null;
+        }
+
+        // Trim and normalize the date string
+        $date = trim($date);
+
+        // If empty string and not required, return null
+        if ('' === $date && !$required) {
+            return null;
+        }
+
+        // List of supported date formats
+        $formats = [
+            'Y-m-d\TH:i:s\Z', // ISO8601 with Z
+            'Y-m-d\TH:i:sP', // ISO8601 with timezone offset
+            'Y-m-d H:i:s', // MySQL datetime
+            'Y-m-d', // Simple date
+            DateTimeInterface::ATOM,
+            DateTimeInterface::RFC3339,
+        ];
+
+        // Try parsing with multiple formats
+        foreach ($formats as $format) {
+            try {
+                return DateTimeImmutable::createFromFormat($format, $date) ?:
+                new DateTimeImmutable($date);
+            } catch (Exception $e) {
+                continue;
+            }
+        }
+
+        // If all parsing attempts fail
+        if ($required) {
+            throw new \InvalidArgumentException("Invalid date format: {$date}");
+        }
+
+        return null;
+    }
+
+    /**
+     * Validate and parse a date range.
+     *
+     * @param string|DateTimeInterface|null $startDate Start date
+     * @param string|DateTimeInterface|null $endDate End date
+     * @param string $fieldName Field name for error messages
+     * @param int|null $maxDaysDifference Maximum allowed days between dates
+     * @return array{start: ?DateTimeImmutable, end: ?DateTimeImmutable}
      *
      * @throws ValidationException If date range is invalid
      */
     protected function validateDateRange(
-        ?string $fromDate,
-        ?string $toDate,
-        string $fieldName,
-        ?int $maxDays = null
-    ): void {
-        if ($fromDate && $toDate) {
-            try {
-                $from = new \DateTimeImmutable($fromDate);
-                $to = new \DateTimeImmutable($toDate);
+        string | DateTimeInterface | null $startDate,
+        string | DateTimeInterface | null $endDate,
+        string $fieldName = 'date',
+        ?int $maxDaysDifference = null
+    ): array {
+        // If both dates are null, return null
+        if (null === $startDate && null === $endDate) {
+            return ['start' => null, 'end' => null];
+        }
 
-                if ($from > $to) {
-                    throw new ValidationException(
-                        "Invalid $fieldName range",
-                        ["{$fieldName}_range" => ['Start date must be before end date']]
-                    );
-                }
+        // Parse dates with lenient parsing
+        try {
+            // Parse start and end dates
+            $parsedStartDate = $startDate ? $this->parseDate($startDate, false) : null;
+            $parsedEndDate = $endDate ? $this->parseDate($endDate, false) : null;
 
-                if ($maxDays !== null) {
-                    $windowLimit = $from->modify("+$maxDays days");
-                    if ($to > $windowLimit) {
-                        throw new ValidationException(
-                            "Invalid $fieldName range",
-                            ["{$fieldName}_range" => ["Date range cannot exceed $maxDays days"]]
-                        );
-                    }
-                }
-            } catch (\Exception $e) {
-                if ($e instanceof ValidationException) {
-                    throw $e;
-                }
+            // If one date is provided, the other becomes required
+            if ((null === $parsedStartDate) xor (null === $parsedEndDate)) {
                 throw new ValidationException(
-                    "Invalid $fieldName format",
-                    ["{$fieldName}_format" => ['Dates must be in valid format']]
+                    "Both {$fieldName} start and end dates are required",
+                    ["{$fieldName}_range" => ['Both start and end dates must be provided']]
                 );
             }
-        }
 
-    }
+            // Validate date order
+            if ($parsedStartDate && $parsedEndDate && $parsedStartDate > $parsedEndDate) {
+                throw new ValidationException(
+                    "Invalid {$fieldName} range",
+                    ["{$fieldName}_range" => ['Start date must be before end date']]
+                );
+            }
 
-    // Add ISO 8601 format validation
-    private function validateIsoFormat(string $date): void
-    {
-        if (! preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $date)) {
+            // Validate maximum date difference if specified
+            if (null !== $maxDaysDifference && $parsedStartDate && $parsedEndDate) {
+                $daysDifference = $parsedStartDate->diff($parsedEndDate)->days;
+                if ($daysDifference > $maxDaysDifference) {
+                    throw new ValidationException(
+                        "Invalid {$fieldName} range",
+                        ["{$fieldName}_range" => ["Date range cannot exceed {$maxDaysDifference} days"]]
+                    );
+                }
+            }
+
+            return [
+                'start' => $parsedStartDate,
+                'end' => $parsedEndDate,
+            ];
+
+        } catch (\Exception $e) {
             throw new ValidationException(
-                "Invalid date format for {$fieldName}",
-                ["{$fieldName}_format" => ['Date must be in ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ)']]
-            );
-        }
-    }
-
-    private function validateTimeZone(string $date): void
-    {
-        $timezone = (new \DateTimeImmutable($date))->getTimezone();
-        if ($timezone->getName() !== 'UTC') {
-            throw new ValidationException(
-                "Invalid timezone for {$fieldName}",
-                ["{$fieldName}_timezone" => ['Date must be in UTC timezone']]
+                "Invalid {$fieldName} format",
+                ["{$fieldName}_format" => [$e->getMessage()]]
             );
         }
     }
