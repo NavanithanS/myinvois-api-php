@@ -26,9 +26,9 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
 
     private const RATE_LIMIT_WINDOW = 3600;
 
-    private ?string $onBehalfOf = null;
+    private $onBehalfOf = null;
 
-    private array $cachedTokens = [];
+    private $cachedTokens = [];
 
     public function __construct(
         string $clientId,
@@ -40,13 +40,13 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
         ?LoggerInterface $logger = null
     ) {
         parent::__construct(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            baseUrl: $baseUrl,
-            httpClient: $httpClient,
-            cache: $cache,
-            config: $config,
-            logger: $logger
+            $clientId,
+            $clientSecret,
+            $baseUrl,
+            $httpClient,
+            $cache,
+            $config,
+            $logger
         );
 
         $this->validateIntermediaryConfig();

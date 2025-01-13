@@ -14,9 +14,9 @@ use Orchestra\Testbench\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
-    protected MockHandler $mockHandler;
-    protected array $container = [];
-    protected MyInvoisClient $client;
+    protected $mockHandler;
+    protected $container = [];
+    protected $client;
 
     protected function setUp(): void
     {
@@ -37,12 +37,12 @@ abstract class TestCase extends BaseTestCase
 
         // Create MyInvois client with complete configuration
         $this->client = new MyInvoisClient(
-            clientId: 'test_client_id',
-            clientSecret: 'test_client_secret',
-            cache: $this->app['cache']->store(),
-            httpClient: $httpClient,
-            baseUrl: MyInvoisClient::SANDBOX_URL,
-            config: [
+            'test_client_id',
+            'test_client_secret',
+            $this->app['cache']->store(),
+            $httpClient,
+            MyInvoisClient::SANDBOX_URL,
+            json_encode([
                 'auth' => [
                     'url' => MyInvoisClient::IDENTITY_SANDBOX_URL,
                     'token_ttl' => 3600,
@@ -64,7 +64,7 @@ abstract class TestCase extends BaseTestCase
                     'enabled' => true,
                     'channel' => 'testing',
                 ],
-            ]
+            ])
         );
     }
 

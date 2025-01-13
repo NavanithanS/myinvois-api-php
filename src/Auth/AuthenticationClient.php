@@ -33,21 +33,21 @@ class AuthenticationClient implements AuthenticationClientInterface
 
     private const RATE_LIMIT_WINDOW = 3600;
 
-    protected ?string $currentToken = null;
+    protected $currentToken = null;
 
-    protected ?int $tokenExpires = null;
+    protected $tokenExpires = null;
 
-    protected readonly string $clientId;
+    protected $clientId;
 
-    protected readonly string $clientSecret;
+    protected $clientSecret;
 
-    protected readonly string $baseUrl;
+    protected $baseUrl;
 
-    protected readonly GuzzleClient $httpClient;
+    protected $httpClient;
 
-    protected readonly CacheRepository $cache;
+    protected $cache;
 
-    protected readonly array $config;
+    protected $config;
 
     public function __construct(
         string $clientId,
@@ -114,7 +114,6 @@ class AuthenticationClient implements AuthenticationClientInterface
             ]);
 
             return $data;
-
         } catch (GuzzleException $e) {
             $this->logError('Authentication request failed', [
                 'error' => $e->getMessage(),
@@ -168,7 +167,6 @@ class AuthenticationClient implements AuthenticationClientInterface
             ]);
 
             return $response;
-
         } catch (GuzzleException $e) {
             $context = [
                 'error_class' => get_class($e),
@@ -221,7 +219,6 @@ class AuthenticationClient implements AuthenticationClientInterface
             }
 
             return $data;
-
         } catch (\Throwable $e) {
             $this->logError('Auth response parsing failed', [
                 'error_class' => get_class($e),
@@ -253,44 +250,51 @@ class AuthenticationClient implements AuthenticationClientInterface
                 $context['error_message'] = $errorMessage;
                 $context['error_data'] = $data;
 
-                return match ($response->getStatusCode()) {
-                    400 => new ValidationException(
-                        'Invalid request format or parameters: ' . $errorMessage,
-                        ['auth' => [$errorMessage]],
-                        400,
-                        $e
-                    ),
-                    401 => new AuthenticationException(
-                        'Invalid credentials or expired token: ' . $errorMessage,
-                        401,
-                        $e
-                    ),
-                    403 => new AuthenticationException(
-                        'Access denied - check permissions: ' . $errorMessage,
-                        403,
-                        $e
-                    ),
-                    404 => new AuthenticationException(
-                        'Authentication endpoint not found - check URL: ' . $errorMessage,
-                        404,
-                        $e
-                    ),
-                    429 => new AuthenticationException(
-                        'Rate limit exceeded: ' . $errorMessage,
-                        429,
-                        $e
-                    ),
-                    500 => new AuthenticationException(
-                        'Server error during authentication: ' . $errorMessage,
-                        500,
-                        $e
-                    ),
-                    default => new AuthenticationException(
-                        'Authentication failed: ' . $errorMessage,
-                        $response->getStatusCode(),
-                        $e
-                    )
-                };
+                switch ($response->getStatusCode()) {
+                    case 400:
+                        return new ValidationException(
+                            'Invalid request format or parameters: ' . $errorMessage,
+                            ['auth' => [$errorMessage]],
+                            400,
+                            $e
+                        );
+                    case 401:
+                        return new AuthenticationException(
+                            'Invalid credentials or expired token: ' . $errorMessage,
+                            401,
+                            $e
+                        );
+                    case 403:
+                        return new AuthenticationException(
+                            'Access denied - check permissions: ' . $errorMessage,
+                            403,
+                            $e
+                        );
+                    case 404:
+                        return new AuthenticationException(
+                            'Authentication endpoint not found - check URL: ' . $errorMessage,
+                            404,
+                            $e
+                        );
+                    case 429:
+                        return new AuthenticationException(
+                            'Rate limit exceeded: ' . $errorMessage,
+                            429,
+                            $e
+                        );
+                    case 500:
+                        return new AuthenticationException(
+                            'Server error during authentication: ' . $errorMessage,
+                            500,
+                            $e
+                        );
+                    default:
+                        return new AuthenticationException(
+                            'Authentication failed: ' . $errorMessage,
+                            $response->getStatusCode(),
+                            $e
+                        );
+                }
             } catch (\Throwable $parseError) {
                 $context['parse_error'] = $parseError->getMessage();
                 $context['raw_response'] = $body;
@@ -370,7 +374,7 @@ class AuthenticationClient implements AuthenticationClientInterface
     protected function isCurrentTokenValid(): bool
     {
         return $this->currentToken && $this->tokenExpires &&
-        time() < ($this->tokenExpires - self::TOKEN_REFRESH_BUFFER);
+            time() < ($this->tokenExpires - self::TOKEN_REFRESH_BUFFER);
     }
 
     protected function getCacheKey(): string

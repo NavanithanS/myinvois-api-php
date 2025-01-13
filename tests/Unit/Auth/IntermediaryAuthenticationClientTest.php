@@ -14,11 +14,11 @@ use Psr\Log\NullLogger;
 
 class IntermediaryAuthenticationClientTest extends TestCase
 {
-    protected MockHandler $mockHandler;
-    protected array $container = [];
-    protected MyInvoisClient $client; // Match parent class type
-    protected string $validTin = 'C1234567890';
-    protected array $validResponse;
+    protected $mockHandler;
+    protected $container = [];
+    protected $client; // Match parent class type
+    protected $validTin = 'C1234567890';
+    protected $validResponse;
 
     protected function setUp(): void
     {
@@ -32,26 +32,26 @@ class IntermediaryAuthenticationClientTest extends TestCase
 
         // Create intermediary authentication client
         $authClient = new IntermediaryAuthenticationClient(
-            clientId: 'test_client',
-            clientSecret: 'test_secret',
-            baseUrl: 'https://test.myinvois.com',
-            httpClient: $httpClient,
-            cache: Cache::store(),
-            config: [
+            'test_client',
+            'test_secret',
+            'https://test.myinvois.com',
+            $httpClient,
+            Cache::store(),
+            [
                 'logging' => ['enabled' => true],
                 'cache' => ['enabled' => true],
             ],
-            logger: new NullLogger
+            new NullLogger
         );
 
         // Create MyInvois client with the intermediary auth client
         $this->client = new MyInvoisClient(
-            clientId: 'test_client',
-            clientSecret: 'test_secret',
-            baseUrl: 'https://test.myinvois.com',
-            cache: Cache::store(),
-            httpClient: $httpClient,
-            config: [
+            'test_client',
+            'test_secret',
+            Cache::store(),
+            'https://test.myinvois.com',
+            $httpClient,
+            [
                 'auth' => [
                     'client' => $authClient,
                 ],

@@ -41,13 +41,13 @@ use Webmozart\Assert\Assert;
  */
 class MyInvoisClient
 {
-    private readonly ApiClient $apiClient;
+    private $apiClient;
 
-    private readonly string $clientId;
+    private $clientId;
 
-    private readonly array $config;
+    private $config;
 
-    private readonly CacheRepository $cache;
+    private $cache;
 
     use DateValidationTrait;
     use DocumentDetailsApi;
@@ -77,12 +77,14 @@ class MyInvoisClient
         string $clientSecret,
         CacheRepository $cache,
         GuzzleClient $httpClient,
+        ApiClient $apiClient,
         string $baseUrl = self::PRODUCTION_URL,
         array $config = []
     ) {
         Assert::notEmpty($clientId, 'Client ID cannot be empty');
         Assert::notEmpty($clientSecret, 'Client secret cannot be empty');
 
+        $this->apiClient = $apiClient;
         $this->clientId = $clientId;
         $this->config = $config;
         $this->cache = $cache;
@@ -93,12 +95,12 @@ class MyInvoisClient
         : self::IDENTITY_PRODUCTION_URL;
 
         $authClient = new AuthenticationClient(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            baseUrl: $identityUrl,
-            httpClient: $httpClient,
-            cache: $cache,
-            config: array_merge([
+            $clientId,
+            $clientSecret,
+            $identityUrl,
+            $httpClient,
+            $cache,
+            array_merge([
                 'cache' => [
                     'enabled' => $config['cache']['enabled'] ?? true,
                     'ttl' => $config['cache']['ttl'] ?? 3600,
@@ -112,13 +114,13 @@ class MyInvoisClient
 
         // Configure the API client with authentication settings
         $this->apiClient = new ApiClient(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            baseUrl: $baseUrl,
-            httpClient: $httpClient,
-            cache: $this->cache,
-            authClient: $authClient,
-            config: array_merge($config, [
+            $clientId,
+            $clientSecret,
+            $baseUrl,
+            $httpClient,
+            $cache,
+            $authClient,
+            array_merge($config, [
                 'auth' => [
                     'url' => $identityUrl,
                 ],
