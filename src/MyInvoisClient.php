@@ -62,7 +62,7 @@ class MyInvoisClient
     use RecentDocumentsApi;
     use SubmissionStatusApi;
     use TaxpayerApi;
-    use UuidValidationTrait;
+    // use UuidValidationTrait;
 
     public const PRODUCTION_URL = 'https://myinvois.hasil.gov.my';
 
