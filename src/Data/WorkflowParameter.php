@@ -18,15 +18,15 @@ class WorkflowParameter extends DataTransferObject implements JsonSerializable
         'rejectionDuration',
     ];
 
-    public int $id;
+    public $id;
 
-    public string $parameter;
+    public $parameter;
 
-    public int $value;
+    public $value;
 
-    public DateTimeImmutable $activeFrom;
+    public $activeFrom;
 
-    public ?DateTimeImmutable $activeTo;
+    public $activeTo;
 
     /**
      * Create a new WorkflowParameter instance from an array.
@@ -89,7 +89,7 @@ class WorkflowParameter extends DataTransferObject implements JsonSerializable
             'parameter' => $this->parameter,
             'value' => $this->value,
             'activeFrom' => $this->activeFrom->format('c'),
-            'activeTo' => $this->activeTo?->format('c'),
+            'activeTo' => $this->activeTo ? $this->activeTo->format('c') : null,
         ];
     }
 }

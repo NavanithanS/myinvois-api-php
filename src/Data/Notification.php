@@ -14,34 +14,34 @@ use Webmozart\Assert\Assert;
  */
 class Notification extends DataTransferObject implements JsonSerializable
 {
-    public string $notificationId;
+    public $notificationId;
 
-    public string $receiverName;
+    public $receiverName;
 
-    public string $notificationDeliveryId;
+    public $notificationDeliveryId;
 
-    public DateTimeImmutable $creationDateTime;
+    public $creationDateTime;
 
-    public DateTimeImmutable $receivedDateTime;
+    public $receivedDateTime;
 
-    public string $notificationSubject;
+    public $notificationSubject;
 
-    public ?DateTimeImmutable $deliveredDateTime;
+    public $deliveredDateTime;
 
-    public int $typeId;
+    public $typeId;
 
-    public string $typeName;
+    public $typeName;
 
-    public ?string $finalMessage;
+    public $finalMessage;
 
-    public string $address;
+    public $address;
 
-    public string $language;
+    public $language;
 
-    public string $status;
+    public $status;
 
     /** @var DeliveryAttempt[] */
-    public array $deliveryAttempts;
+    public $deliveryAttempts;
 
     /**
      * Create a new Notification instance from an array.
@@ -88,9 +88,12 @@ class Notification extends DataTransferObject implements JsonSerializable
             'language' => $data['language'],
             'status' => $data['status'],
             'deliveryAttempts' => array_map(
-                fn (array $attempt) => DeliveryAttempt::fromArray($attempt),
+                function (array $attempt) {
+                    return DeliveryAttempt::fromArray($attempt);
+                },
                 $data['deliveryAttempts']
             ),
+            
         ]);
     }
 
@@ -168,9 +171,12 @@ class Notification extends DataTransferObject implements JsonSerializable
         return $this->getStatus() === NotificationStatusEnum::ERROR ||
         array_reduce(
             $this->deliveryAttempts,
-            fn (bool $carry, DeliveryAttempt $attempt) => $carry || $attempt->status === 'error',
+            function (bool $carry, DeliveryAttempt $attempt) {
+                return $carry || $attempt->status === 'error';
+            },
             false
         );
+    
     }
 
     /**
@@ -185,17 +191,16 @@ class Notification extends DataTransferObject implements JsonSerializable
             'creationDateTime' => $this->creationDateTime->format('c'),
             'receivedDateTime' => $this->receivedDateTime->format('c'),
             'notificationSubject' => $this->notificationSubject,
-            'deliveredDateTime' => $this->deliveredDateTime?->format('c'),
+            'deliveredDateTime' => $this->deliveredDateTime ? $this->deliveredDateTime->format('c') : null,
             'typeId' => $this->typeId,
             'typeName' => $this->typeName,
             'finalMessage' => $this->finalMessage,
             'address' => $this->address,
             'language' => $this->language,
             'status' => $this->status,
-            'deliveryAttempts' => array_map(
-                fn (DeliveryAttempt $attempt) => $attempt->jsonSerialize(),
-                $this->deliveryAttempts
-            ),
+            'deliveryAttempts' => array_map(function (DeliveryAttempt $attempt) {
+                return $attempt->toArray();
+            }, $this->deliveryAttempts),
         ];
     }
 }
@@ -205,11 +210,11 @@ class Notification extends DataTransferObject implements JsonSerializable
  */
 class DeliveryAttempt extends DataTransferObject implements JsonSerializable
 {
-    public DateTimeImmutable $attemptDateTime;
+    public $attemptDateTime;
 
-    public string $status;
+    public $status;
 
-    public ?string $statusDetails;
+    public $statusDetails;
 
     /**
      * Create a new DeliveryAttempt instance from an array.

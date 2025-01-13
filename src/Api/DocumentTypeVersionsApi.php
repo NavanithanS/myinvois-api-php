@@ -13,7 +13,7 @@ use Webmozart\Assert\Assert;
  */
 trait DocumentTypeVersionsApi
 {
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
     /**
      * Get a specific document type version.
@@ -115,7 +115,9 @@ trait DocumentTypeVersionsApi
             $documentType = $this->getDocumentType($documentTypeId);
             $activeVersions = array_filter(
                 $documentType->documentTypeVersions,
-                fn (DocumentTypeVersion $version) => $version->isActive()
+                function (DocumentTypeVersion $version) {
+                    return $version->isActive();
+                }
             );
 
             $this->logDebug('Retrieved active document type versions', [
@@ -123,7 +125,9 @@ trait DocumentTypeVersionsApi
                 'total_versions' => count($documentType->documentTypeVersions),
                 'active_versions' => count($activeVersions),
                 'version_numbers' => array_map(
-                    fn ($v) => $v->versionNumber,
+                    function ($v) {
+                        return $v->versionNumber;
+                    },
                     $activeVersions
                 ),
             ]);
@@ -155,9 +159,11 @@ trait DocumentTypeVersionsApi
 
             $latestVersion = array_reduce(
                 $activeVersions,
-                fn ($carry, $version) => $carry === null || $version->versionNumber > $carry->versionNumber
-                ? $version
-                : $carry
+                function ($carry, $version) {
+                    return $carry === null || $version->versionNumber > $carry->versionNumber
+                        ? $version
+                        : $carry;
+                }
             );
 
             $this->logDebug('Retrieved latest document type version', [
@@ -225,10 +231,13 @@ trait DocumentTypeVersionsApi
      */
     private function validateVersion(string $type, string $version): bool
     {
-        $supportedVersions = match ($type) {
-            'debit' => Config::DEBIT_NOTE_SUPPORTED_VERSIONS,
-            default => throw new ValidationException('Unsupported document type')
-        };
+        switch ($type) {
+            case 'debit':
+                $supportedVersions = Config::DEBIT_NOTE_SUPPORTED_VERSIONS;
+                break;
+            default:
+                throw new ValidationException('Unsupported document type');
+        }
 
         if (! in_array($version, $supportedVersions)) {
             throw new ValidationException(
@@ -247,9 +256,16 @@ trait DocumentTypeVersionsApi
      */
     public function getSupportedVersions(string $type): array
     {
-        return match ($type) {
-            'debit' => Config::DEBIT_NOTE_SUPPORTED_VERSIONS,
-            default => []
-        };
+        $supportedVersions = [];
+        switch ($type) {
+            case 'debit':
+                $supportedVersions = Config::DEBIT_NOTE_SUPPORTED_VERSIONS;
+                break;
+            default:
+                $supportedVersions = [];
+                break;
+        }
+
+        return $supportedVersions;
     }
 }

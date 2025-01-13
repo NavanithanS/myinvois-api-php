@@ -19,7 +19,7 @@ use Webmozart\Assert\Assert;
  */
 trait DocumentTypesApi
 {
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
     /**
      * Retrieve all document types from the MyInvois system.
@@ -38,14 +38,18 @@ trait DocumentTypesApi
             }
 
             $types = array_map(
-                fn (array $type) => DocumentType::fromArray($type),
+                function (array $type) {
+                    return DocumentType::fromArray($type);
+                },
                 $response['result']
             );
 
             $this->logDebug('Retrieved document types successfully', [
                 'count' => count($types),
-                'active_count' => count(array_filter($types, fn ($type) => $type->isActive())),
-            ]);
+                'active_count' => count(array_filter($types, function ($type) {
+                    return $type->isActive();
+                })),
+            ]);            
 
             return $types;
         } catch (ApiException $e) {
@@ -103,8 +107,10 @@ trait DocumentTypesApi
     public function getActiveDocumentTypes(): array
     {
         $types = $this->getDocumentTypes();
-        $activeTypes = array_filter($types, fn (DocumentType $type) => $type->isActive());
-
+        $activeTypes = array_filter($types, function (DocumentType $type) {
+            return $type->isActive();
+        });
+        
         $this->logDebug('Retrieved active document types', [
             'total' => count($types),
             'active' => count($activeTypes),
@@ -125,7 +131,9 @@ trait DocumentTypesApi
     public function findDocumentTypesByCodes(array $codes): array
     {
         try {
-            $validCodes = array_map(fn ($case) => $case->value, DocumentTypeEnum::cases());
+            $validCodes = array_map(function ($case) {
+                return $case->value;
+            }, DocumentTypeEnum::cases());            
 
             foreach ($codes as $code) {
                 Assert::inArray($code, $validCodes, sprintf(
@@ -203,10 +211,9 @@ trait DocumentTypesApi
      */
     public function getSupportedDocumentTypeCodes(): array
     {
-        $codes = array_map(
-            fn ($case) => $case->value,
-            DocumentTypeEnum::cases()
-        );
+        $codes = array_map(function ($case) {
+            return $case->value;
+        }, DocumentTypeEnum::cases());        
 
         $this->logDebug('Retrieved supported document type codes', [
             'count' => count($codes),
@@ -291,7 +298,8 @@ trait DocumentTypesApi
                 ]);
             }
 
-            return $parameter?->value;
+            return isset($parameter) ? $parameter->value : null;
+
         } catch (ApiException $e) {
             if ($e->getCode() === 404) {
                 return null;
@@ -318,8 +326,10 @@ trait DocumentTypesApi
             $this->logDebug('Retrieved active workflow parameters', [
                 'documentTypeId' => $documentTypeId,
                 'count' => count($parameters),
-                'parameter_names' => array_map(fn ($p) => $p->parameter, $parameters),
-            ]);
+                'parameter_names' => array_map(function ($p) {
+                    return $p->parameter;
+                }, $parameters),
+            ]);            
 
             return $parameters;
         } catch (ApiException $e) {

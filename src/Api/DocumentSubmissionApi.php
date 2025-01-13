@@ -18,7 +18,7 @@ trait DocumentSubmissionApi
 {
     use RateLimitingTrait;
 
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
     private const MAX_SUBMISSION_SIZE = 5 * 1024 * 1024; // 5 MB
 
@@ -62,9 +62,11 @@ trait DocumentSubmissionApi
                 ]);
 
                 $preparedDocuments = array_map(
-                    fn(array $doc) => $this->prepareDocument($doc, $format),
+                    function (array $doc) use ($format) {
+                        return $this->prepareDocument($doc, $format);
+                    },
                     $documents
-                );
+                );                
 
                 $response = $this->apiClient->request('POST', self::SUBMISSION_ENDPOINT, [
                     'headers' => ['Content-Type' => $this->getContentType($format)],
@@ -319,9 +321,11 @@ trait DocumentSubmissionApi
     {
         return array_reduce(
             $documents,
-            fn(int $total, array $doc) => $total + strlen($doc['document']),
+            function (int $total, array $doc) {
+                return $total + strlen($doc['document']);
+            },
             0
-        );
+        );        
     }
 
     /**
@@ -329,10 +333,12 @@ trait DocumentSubmissionApi
      */
     private function getContentType(DocumentFormat $format): string
     {
-        return match ($format) {
-            DocumentFormat::JSON => 'application/json',
-            DocumentFormat::XML => 'application/xml',
-        };
+        switch ($format) {
+            case DocumentFormat::JSON:
+                return 'application/json';
+            case DocumentFormat::XML:
+                return 'application/xml';
+        }
     }
 
     /**

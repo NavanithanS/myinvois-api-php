@@ -13,7 +13,7 @@ use Webmozart\Assert\Assert;
  */
 trait NotificationsApi
 {
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
     /**
      * Get notifications with optional filtering.

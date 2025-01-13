@@ -2,8 +2,9 @@
 
 namespace Nava\MyInvois\Enums;
 
-enum DocumentFormat: string
+class DocumentFormat
 {
-    case JSON = 'JSON';
-    case XML = 'XML';
+    const JSON = 'JSON';
+    const XML = 'XML';
 }
+

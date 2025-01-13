@@ -5,33 +5,27 @@ namespace Nava\MyInvois\Enums;
 /**
  * Represents the possible document types in the MyInvois system.
  */
-enum DocumentTypeEnum: int
+class DocumentTypeEnum
 {
-    /**
-     * Regular Invoice
-     */
-    case INVOICE = 4;
-
-    /**
-     * Credit Note
-     */
-    case CREDIT_NOTE = 11;
-
-    /**
-     * Debit Note
-     */
-    case DEBIT_NOTE = 12;
+    const INVOICE = 4;
+    const CREDIT_NOTE = 11;
+    const DEBIT_NOTE = 12;
 
     /**
      * Returns a human-readable description of the document type.
      */
-    public function description(): string
+    public static function description($type): string
     {
-        return match ($this) {
-            self::INVOICE => 'Invoice',
-            self::CREDIT_NOTE => 'Credit Note',
-            self::DEBIT_NOTE => 'Debit Note',
-        };
+        switch ($type) {
+            case self::INVOICE:
+                return 'Invoice';
+            case self::CREDIT_NOTE:
+                return 'Credit Note';
+            case self::DEBIT_NOTE:
+                return 'Debit Note';
+            default:
+                throw new InvalidArgumentException("Invalid document type.");
+        }
     }
 
     /**
@@ -41,7 +35,7 @@ enum DocumentTypeEnum: int
      */
     public static function getCodes(): array
     {
-        return array_map(fn ($case) => $case->value, self::cases());
+        return [self::INVOICE, self::CREDIT_NOTE, self::DEBIT_NOTE];
     }
 
     /**
@@ -55,10 +49,14 @@ enum DocumentTypeEnum: int
     /**
      * Create from code.
      *
-     * @throws \ValueError If code is invalid
+     * @throws \InvalidArgumentException If code is invalid
      */
-    public static function fromCode(int $code): self
+    public static function fromCode(int $code)
     {
-        return self::from($code);
+        if (self::isValidCode($code)) {
+            return $code;
+        }
+        throw new InvalidArgumentException("Invalid code: $code");
     }
 }
+

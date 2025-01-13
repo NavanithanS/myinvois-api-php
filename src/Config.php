@@ -70,14 +70,25 @@ class Config
      */
     public static function isVersionSupported(string $docType, string $version): bool
     {
-        $supportedVersions = match ($docType) {
-            'invoice' => self::INVOICE_SUPPORTED_VERSIONS,
-            'credit_note' => self::CREDIT_NOTE_SUPPORTED_VERSIONS,
-            'debit_note' => self::DEBIT_NOTE_SUPPORTED_VERSIONS,
-            default => []
-        };
+        $supportedVersions = [];
 
+        switch ($docType) {
+            case 'invoice':
+                $supportedVersions = self::INVOICE_SUPPORTED_VERSIONS;
+                break;
+            case 'credit_note':
+                $supportedVersions = self::CREDIT_NOTE_SUPPORTED_VERSIONS;
+                break;
+            case 'debit_note':
+                $supportedVersions = self::DEBIT_NOTE_SUPPORTED_VERSIONS;
+                break;
+            default:
+                $supportedVersions = [];
+                break;
+        }
+        
         return in_array($version, $supportedVersions, true);
+        
     }
 
     /**
@@ -90,13 +101,18 @@ class Config
      */
     public static function getCurrentVersion(string $docType): string
     {
-        return match ($docType) {
-            'invoice' => self::INVOICE_CURRENT_VERSION,
-            'credit_note' => self::CREDIT_NOTE_CURRENT_VERSION,
-            'debit_note' => self::DEBIT_NOTE_CURRENT_VERSION,
-            default => throw new \InvalidArgumentException(
-                'Invalid document type. Must be one of: invoice, credit_note, debit_note'
-            )
-        };
+        switch ($docType) {
+            case 'invoice':
+                return self::INVOICE_CURRENT_VERSION;
+            case 'credit_note':
+                return self::CREDIT_NOTE_CURRENT_VERSION;
+            case 'debit_note':
+                return self::DEBIT_NOTE_CURRENT_VERSION;
+            default:
+                throw new \InvalidArgumentException(
+                    'Invalid document type. Must be one of: invoice, credit_note, debit_note'
+                );
+        }
+        
     }
 }
