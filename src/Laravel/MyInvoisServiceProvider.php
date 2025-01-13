@@ -88,13 +88,22 @@ class MyInvoisServiceProvider extends ServiceProvider
         $this->app->singleton(IntermediaryAuthenticationClientInterface::class, function ($app) {
             $config = $app['config']['myinvois'];
 
+            // return new IntermediaryAuthenticationClient(
+            //     clientId: $config['client_id'],
+            //     clientSecret: $config['client_secret'],
+            //     baseUrl: $config['auth']['url'] ?? Config::IDENTITY_PRODUCTION_URL,
+            //     httpClient: $app->make(GuzzleClient::class),
+            //     cache: $app['cache']->store(), // Pass the cache store instance
+            //     config: $this->getAuthConfig($config)
+            // );
+
             return new IntermediaryAuthenticationClient(
-                clientId: $config['client_id'],
-                clientSecret: $config['client_secret'],
-                baseUrl: $config['auth']['url'] ?? Config::IDENTITY_PRODUCTION_URL,
-                httpClient: $app->make(GuzzleClient::class),
-                cache: $app['cache']->store(), // Pass the cache store instance
-                config: $this->getAuthConfig($config)
+                $config['client_id'],
+                $config['client_secret'],
+                $config['auth']['url'] ?? Config::IDENTITY_PRODUCTION_URL,
+                $app->make(GuzzleClient::class),
+                $app['cache']->store(), // Pass the cache store instance
+                $this->getAuthConfig($config)
             );
         });
     }
