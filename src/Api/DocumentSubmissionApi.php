@@ -20,15 +20,15 @@ trait DocumentSubmissionApi
 
     protected $logger = null;
 
-    private const MAX_SUBMISSION_SIZE = 5 * 1024 * 1024; // 5 MB
+    private $MAX_SUBMISSION_SIZE = 5 * 1024 * 1024; // 5 MB
 
-    private const MAX_DOCUMENT_SIZE = 300 * 1024; // 300 KB
+    private $MAX_DOCUMENT_SIZE = 300 * 1024; // 300 KB
 
-    private const MAX_DOCUMENTS_PER_SUBMISSION = 100;
+    private $MAX_DOCUMENTS_PER_SUBMISSION = 100;
 
-    private const DUPLICATE_DETECTION_WINDOW = 600; // 10 minutes
+    private $DUPLICATE_DETECTION_WINDOW = 600; // 10 minutes
 
-    private const SUBMISSION_ENDPOINT = '/api/v1.0/documentsubmissions';
+    private $SUBMISSION_ENDPOINT = '/api/v1.0/documentsubmissions';
 
     /**
      * Submit one or more documents to MyInvois.
@@ -68,7 +68,7 @@ trait DocumentSubmissionApi
                     $documents
                 );                
 
-                $response = $this->apiClient->request('POST', self::SUBMISSION_ENDPOINT, [
+                $response = $this->apiClient->request('POST', self::$SUBMISSION_ENDPOINT, [
                     'headers' => ['Content-Type' => $this->getContentType($format)],
                     'json' => ['documents' => $preparedDocuments],
                     'timeout' => 30,
@@ -167,13 +167,13 @@ trait DocumentSubmissionApi
         Assert::notEmpty($documents, 'At least one document is required');
         Assert::maxCount(
             $documents,
-            self::MAX_DOCUMENTS_PER_SUBMISSION,
-            sprintf('Maximum of %d documents per submission allowed', self::MAX_DOCUMENTS_PER_SUBMISSION)
+            self::$MAX_DOCUMENTS_PER_SUBMISSION,
+            sprintf('Maximum of %d documents per submission allowed', self::$MAX_DOCUMENTS_PER_SUBMISSION)
         );
 
         // Validate total size
         $totalSize = $this->calculateSubmissionSize($documents);
-        if ($totalSize > self::MAX_SUBMISSION_SIZE) {
+        if ($totalSize > self::$MAX_SUBMISSION_SIZE) {
             throw new ValidationException(
                 'Maximum submission size exceeded',
                 ['size' => ['Total submission size must not exceed 5MB']]
@@ -207,7 +207,7 @@ trait DocumentSubmissionApi
 
         // Validate document size
         $size = strlen($document['document']);
-        if ($size > self::MAX_DOCUMENT_SIZE) {
+        if ($size > self::$MAX_DOCUMENT_SIZE) {
             throw new ValidationException(
                 sprintf('Document %s exceeds maximum size', $document['codeNumber']),
                 ['size' => ['Individual document size must not exceed 300KB']]
