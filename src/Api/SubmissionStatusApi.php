@@ -12,9 +12,9 @@ use Webmozart\Assert\Assert;
  */
 trait SubmissionStatusApi
 {
-    private const MAX_PAGE_SIZE = 100;
+    private $MAX_PAGE_SIZE = 100;
 
-    private const MIN_POLL_INTERVAL = 3; // seconds
+    private $MIN_POLL_INTERVAL = 3; // seconds
 
     protected $logger = null;
 
@@ -121,8 +121,8 @@ trait SubmissionStatusApi
         }
 
         if ($pageSize !== null) {
-            Assert::range($pageSize, 1, self::MAX_PAGE_SIZE,
-                sprintf('Page size must be between 1 and %d', self::MAX_PAGE_SIZE)
+            Assert::range($pageSize, 1, self::$MAX_PAGE_SIZE,
+                sprintf('Page size must be between 1 and %d', self::$MAX_PAGE_SIZE)
             );
         }
     }
@@ -138,11 +138,11 @@ trait SubmissionStatusApi
         $lastPollTime = $this->lastPollTimes[$submissionId] ?? 0;
         $timeSinceLastPoll = $now - $lastPollTime;
 
-        if ($timeSinceLastPoll < self::MIN_POLL_INTERVAL) {
+        if ($timeSinceLastPoll < self::$MIN_POLL_INTERVAL) {
             throw new ApiException(
                 sprintf(
                     'Please wait %d seconds between status checks for the same submission',
-                    self::MIN_POLL_INTERVAL
+                    self::$MIN_POLL_INTERVAL
                 ),
                 429
             );
@@ -252,7 +252,7 @@ trait SubmissionStatusApi
     public function getAllSubmissionDocuments(string $submissionId): array
     {
         $pageNo = 1;
-        $pageSize = self::MAX_PAGE_SIZE;
+        $pageSize = self::$MAX_PAGE_SIZE;
         $allDocuments = [];
 
         do {
@@ -262,7 +262,7 @@ trait SubmissionStatusApi
 
             // Add delay between requests to respect rate limits
             if (count($response['documentSummary']) === $pageSize) {
-                usleep(self::MIN_POLL_INTERVAL * 1000000);
+                usleep(self::$MIN_POLL_INTERVAL * 1000000);
             }
         } while (count($response['documentSummary']) === $pageSize);
 
