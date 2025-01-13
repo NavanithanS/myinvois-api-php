@@ -11,7 +11,7 @@ use Psr\Log\LoggerInterface;
  */
 trait DocumentRejectionApi
 {
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
     /**
      * Reject a document.
