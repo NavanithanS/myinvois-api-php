@@ -16,7 +16,7 @@ use Webmozart\Assert\Assert;
  */
 trait DocumentRetrievalApi
 {
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
     use UuidValidationTrait;
     use DateValidationTrait;

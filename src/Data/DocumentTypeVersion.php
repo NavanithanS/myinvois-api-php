@@ -14,19 +14,19 @@ class DocumentTypeVersion extends DataTransferObject implements JsonSerializable
 {
     private const VALID_STATUSES = ['draft', 'published', 'deactivated'];
 
-    public int $id;
+    public $id;
 
-    public string $name;
+    public $name;
 
-    public string $description;
+    public $description;
 
-    public DateTimeImmutable $activeFrom;
+    public $activeFrom;
 
-    public ?DateTimeImmutable $activeTo;
+    public $activeTo;
 
-    public float $versionNumber;
+    public $versionNumber;
 
-    public string $status;
+    public $status;
 
     /**
      * Create a new DocumentTypeVersion instance from an array.
@@ -96,9 +96,10 @@ class DocumentTypeVersion extends DataTransferObject implements JsonSerializable
             'name' => $this->name,
             'description' => $this->description,
             'activeFrom' => $this->activeFrom->format('c'),
-            'activeTo' => $this->activeTo?->format('c'),
+            'activeTo' => $this->activeTo ? $this->activeTo->format('c') : null,
             'versionNumber' => $this->versionNumber,
             'status' => $this->status,
         ];
+        
     }
 }

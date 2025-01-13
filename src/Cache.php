@@ -8,7 +8,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 
 class Cache implements CacheRepository
 {
-    private readonly CacheRepository $repository;
+    private $repository;
 
     /**
      * Create a new Cache instance.

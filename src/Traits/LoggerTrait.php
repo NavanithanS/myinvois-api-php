@@ -9,7 +9,7 @@ use Psr\Log\LoggerInterface;
  */
 trait LoggerTrait
 {
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
     /**
      * Set the logger instance.

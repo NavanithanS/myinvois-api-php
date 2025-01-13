@@ -12,7 +12,7 @@ use Webmozart\Assert\Assert;
  */
 trait TaxpayerApi
 {
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
     /**
      * Validate a taxpayer's TIN with additional identification.
@@ -31,11 +31,11 @@ trait TaxpayerApi
      * @throws ValidationException If the input parameters are invalid
      * @throws ApiException If the API request fails
      */
-    private const CACHE_PREFIX = 'myinvois_tin_validation_';
+    private $CACHE_PREFIX = 'myinvois_tin_validation_';
 
-    private const CACHE_TTL = 86400; // 24 hours
+    private $CACHE_TTL = 86400; // 24 hours
 
-    private const VALID_ID_TYPES = ['NRIC', 'PASSPORT', 'BRN', 'ARMY'];
+    private $VALID_ID_TYPES = ['NRIC', 'PASSPORT', 'BRN', 'ARMY'];
 
     /**
      * Validate a taxpayer's TIN with additional identification.
@@ -98,7 +98,7 @@ trait TaxpayerApi
             // Store successful result in cache
             if ($useCache && isset($this->cache)) {
                 $cacheKey = $this->getCacheKey($tin, $idType, $idValue);
-                $this->cache->put($cacheKey, true, self::CACHE_TTL);
+                $this->cache->put($cacheKey, true, self::$CACHE_TTL);
             }
 
             return true;
@@ -153,10 +153,10 @@ trait TaxpayerApi
 
         $normalizedType = strtoupper(trim($idType));
 
-        if (! in_array($normalizedType, self::VALID_ID_TYPES, true)) {
+        if (! in_array($normalizedType, self::$VALID_ID_TYPES, true)) {
             throw new ValidationException(
                 'Invalid ID type',
-                ['idType' => ['ID type must be one of: '.implode(', ', self::VALID_ID_TYPES)]],
+                ['idType' => ['ID type must be one of: '.implode(', ', self::$VALID_ID_TYPES)]],
                 422
             );
         }
@@ -172,7 +172,7 @@ trait TaxpayerApi
         Assert::notEmpty($idValue, 'ID value cannot be empty');
 
         $normalizedType = strtoupper($idType);
-        $pattern = self::ID_PATTERNS[$normalizedType] ?? null;
+        $pattern = self::$ID_PATTERNS[$normalizedType] ?? null;
 
         if (! $pattern || ! preg_match($pattern, $idValue)) {
             $errorMessages = [
@@ -257,7 +257,7 @@ trait TaxpayerApi
      */
     public static function getValidIdTypes(): array
     {
-        return self::VALID_ID_TYPES;
+        return self::$VALID_ID_TYPES;
     }
 
     /**
@@ -268,6 +268,6 @@ trait TaxpayerApi
      */
     public static function getValidationPattern(string $idType): ?string
     {
-        return self::ID_PATTERNS[strtoupper($idType)] ?? null;
+        return self::$ID_PATTERNS[strtoupper($idType)] ?? null;
     }
 }

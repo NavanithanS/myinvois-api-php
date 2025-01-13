@@ -16,9 +16,9 @@ trait DocumentSearchApi
 {
     use DateValidationTrait;
 
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
-    private const MAX_PAGE_SIZE = 100;
+    private $MAX_PAGE_SIZE = 100;
 
     /**
      * Search for documents.
@@ -77,8 +77,8 @@ trait DocumentSearchApi
             Assert::range(
                 $filters['pageSize'],
                 1,
-                self::MAX_PAGE_SIZE,
-                'Page size must be between 1 and '.self::MAX_PAGE_SIZE
+                self::$MAX_PAGE_SIZE,
+                'Page size must be between 1 and '.self::$MAX_PAGE_SIZE
             );
         }
 

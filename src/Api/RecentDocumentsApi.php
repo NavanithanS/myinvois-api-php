@@ -15,7 +15,7 @@ trait RecentDocumentsApi
 {
     use DateValidationTrait;
 
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
     /**
      * Get recent documents with optional filtering.

@@ -16,9 +16,9 @@ trait SubmissionStatusApi
 
     private const MIN_POLL_INTERVAL = 3; // seconds
 
-    protected ?LoggerInterface $logger = null;
+    protected $logger = null;
 
-    private array $lastPollTimes = [];
+    private $lastPollTimes = [];
 
     /**
      * Get details of a document submission.
@@ -210,23 +210,28 @@ trait SubmissionStatusApi
         // Log details about failed documents if any
         $failedDocuments = array_filter(
             $response['documentSummary'],
-            fn ($doc) => strtolower($doc['status']) === 'invalid'
-        );
+            function ($doc) {
+                return strtolower($doc['status']) === 'invalid';
+            }
+        );        
 
-        if (! empty($failedDocuments)) {
+        if (!empty($failedDocuments)) {
             $this->logError('Some documents in submission have failed', [
                 'submissionId' => $submissionId,
                 'failedCount' => count($failedDocuments),
                 'failedDocuments' => array_map(
-                    fn ($doc) => [
-                        'uuid' => $doc['uuid'],
-                        'internalId' => $doc['internalId'],
-                        'status' => $doc['status'],
-                    ],
+                    function ($doc) {
+                        return [
+                            'uuid' => $doc['uuid'],
+                            'internalId' => $doc['internalId'],
+                            'status' => $doc['status'],
+                        ];
+                    },
                     $failedDocuments
                 ),
             ]);
         }
+        
     }
 
     /**

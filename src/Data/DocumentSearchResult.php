@@ -14,63 +14,63 @@ use Webmozart\Assert\Assert;
  */
 class DocumentSearchResult extends DataTransferObject implements JsonSerializable
 {
-    public string $uuid;
+    public $uuid;
 
-    public string $submissionUID;
+    public $submissionUID;
 
-    public string $longId;
+    public $longId;
 
-    public string $internalId;
+    public $internalId;
 
-    public string $typeName;
+    public $typeName;
 
-    public string $typeVersionName;
+    public $typeVersionName;
 
-    public string $issuerTin;
+    public $issuerTin;
 
-    public string $issuerName;
+    public $issuerName;
 
-    public ?string $receiverId;
+    public $receiverId;
 
-    public ?string $receiverName;
+    public $receiverName;
 
-    public DateTimeImmutable $dateTimeIssued;
+    public $dateTimeIssued;
 
-    public DateTimeImmutable $dateTimeReceived;
+    public $dateTimeReceived;
 
-    public DateTimeImmutable $dateTimeValidated;
+    public $dateTimeValidated;
 
-    public float $totalSales;
+    public $totalSales;
 
-    public float $totalDiscount;
+    public $totalDiscount;
 
-    public float $netAmount;
+    public $netAmount;
 
-    public float $total;
+    public $total;
 
-    public string $status;
+    public $status;
 
-    public ?DateTimeImmutable $cancelDateTime;
+    public $cancelDateTime;
 
-    public ?DateTimeImmutable $rejectRequestDateTime;
+    public $rejectRequestDateTime;
 
-    public ?string $documentStatusReason;
+    public $documentStatusReason;
 
-    public string $createdByUserId;
+    public $createdByUserId;
 
-    public string $supplierTIN;
+    public $supplierTIN;
 
-    public string $supplierName;
+    public $supplierName;
 
-    public string $submissionChannel;
+    public $submissionChannel;
 
-    public ?string $intermediaryName;
+    public $intermediaryName;
 
-    public ?string $intermediaryTIN;
+    public $intermediaryTIN;
 
-    public string $buyerName;
+    public $buyerName;
 
-    public string $buyerTIN;
+    public $buyerTIN;
 
     /**
      * Create a new DocumentSearchResult instance from an array.
