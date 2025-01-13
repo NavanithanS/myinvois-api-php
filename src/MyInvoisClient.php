@@ -21,6 +21,7 @@ use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Http\ApiClient;
 use Nava\MyInvois\Traits\DateValidationTrait;
 use Nava\MyInvois\Traits\LoggerTrait;
+use Nava\MyInvois\Traits\UuidValidationTrait;
 use Webmozart\Assert\Assert;
 
 /**
@@ -48,19 +49,20 @@ class MyInvoisClient
 
     private $cache;
 
-    use DateValidationTrait;
-    use DocumentDetailsApi;
-    use DocumentRejectionApi;
-    use DocumentRetrievalApi;
-    use DocumentSearchApi;
-    use DocumentSubmissionApi;
-    use DocumentTypesApi;
-    use DocumentTypeVersionsApi;
-    use LoggerTrait;
-    use NotificationsApi;
-    use RecentDocumentsApi;
-    use SubmissionStatusApi;
-    use TaxpayerApi;
+    // use DateValidationTrait;
+    // use DocumentDetailsApi;
+    // use DocumentRejectionApi;
+    // use DocumentRetrievalApi;
+    // use DocumentSearchApi;
+    // use DocumentSubmissionApi;
+    // use DocumentTypesApi;
+    // use DocumentTypeVersionsApi;
+    // use LoggerTrait;
+    // use NotificationsApi;
+    // use RecentDocumentsApi;
+    // use SubmissionStatusApi;
+    // use TaxpayerApi;
+    // use UuidValidationTrait;
 
     public const PRODUCTION_URL = 'https://myinvois.hasil.gov.my';
 
