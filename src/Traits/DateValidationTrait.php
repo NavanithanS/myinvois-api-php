@@ -80,10 +80,10 @@ trait DateValidationTrait
      * @throws ValidationException If date range is invalid
      */
     protected function validateDateRange(
-        string | DateTimeInterface | null $startDate,
-        string | DateTimeInterface | null $endDate,
-        string $fieldName = 'date',
-        ?int $maxDaysDifference = null
+        $startDate,
+        $endDate,
+        $fieldName = 'date',
+        $maxDaysDifference = null
     ): array {
         // If both dates are null, return null
         if (null === $startDate && null === $endDate) {
