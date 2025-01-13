@@ -18,10 +18,7 @@ trait DateValidationTrait
      *
      * @throws \InvalidArgumentException If date is invalid and required
      */
-    protected function parseDate(
-        string | DateTimeInterface | null $date,
-        bool $required = false
-    ): ?DateTimeImmutable {
+    protected function parseDate($date, $required = false): ?DateTimeImmutable {
         // If date is already a DateTimeInterface, convert to DateTimeImmutable
         if ($date instanceof DateTimeInterface) {
             return DateTimeImmutable::createFromInterface($date);
