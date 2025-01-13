@@ -19,19 +19,25 @@ use Psr\Http\Message\ResponseInterface;
  */
 class ApiClient
 {
-    private ?string $accessToken = null;
-
-    private ?int $tokenExpires = null;
+    private $accessToken = null;
+    private $tokenExpires = null;
+    private $httpClient;
+    private $cache;
+    private $authClient;
 
     public function __construct(
-        private readonly string $clientId,
-        private readonly string $clientSecret,
-        private readonly string $baseUrl,
-        private readonly GuzzleClient $httpClient,
-        private readonly CacheRepository $cache,
-        private readonly AuthenticationClient $authClient,
-        private readonly array $config = []
-    ) {}
+        $clientId,
+        $clientSecret,
+        $baseUrl,
+        GuzzleClient $httpClient,
+        CacheRepository $cache,
+        AuthenticationClient $authClient,
+        $config = []
+    ) {
+        $this->httpClient = $httpClient;
+        $this->cache = $cache;
+        $this->authClient = $authClient;
+    }
 
     /**
      * Send a synchronous request to the API.
@@ -73,7 +79,9 @@ class ApiClient
 
             return $this->httpClient->requestAsync($method, $this->baseUrl . $endpoint, $options)
                 ->then(
-                    fn(ResponseInterface $response) => $this->handleResponse($response),
+                    function (ResponseInterface $response) {
+                        return $this->handleResponse($response);
+                    },
                     function (RequestException $exception) use ($method, $endpoint, $options) {
                         if ($this->shouldRetry($exception)) {
                             return $this->retryRequest($method, $endpoint, $options);
@@ -175,13 +183,13 @@ class ApiClient
 
         try {
             $body = json_decode((string) $response->getBody(), true);
-        } catch (\Throwable) {
+        } catch (\Exception $e) {
             throw new ApiException(
                 'Invalid response format from API',
                 $response->getStatusCode(),
                 $e
             );
-        }
+        }        
 
         $statusCode = $response->getStatusCode();
         $message = $body['error'] ?? $body['error_description'] ?? 'Unknown error occurred';
@@ -256,8 +264,8 @@ class ApiClient
     {
         if (isset($this->config['http']['retry']['sleep'])) {
             return is_callable($this->config['http']['retry']['sleep'])
-            ? ($this->config['http']['retry']['sleep'])($retry)
-            : $this->config['http']['retry']['sleep'];
+                ? ($this->config['http']['retry']['sleep'])($retry)
+                : $this->config['http']['retry']['sleep'];
         }
 
         // Exponential backoff with jitter

@@ -12,9 +12,9 @@ use Psr\Log\LoggerInterface;
 
 class DocumentDetailsApiTest extends TestCase
 {
-    private string $validUuid = 'F9D425P6DS7D8IU';
+    private $validUuid = 'F9D425P6DS7D8IU';
 
-    private array $validResponse;
+    private $validResponse;
 
     protected function setUp(): void
     {
@@ -221,14 +221,13 @@ class DocumentDetailsApiTest extends TestCase
 
         // Create a new client instance with the desired base URL
         $this->client = new \Nava\MyInvois\MyInvoisClient(
-            clientId: 'test_client',
-            clientSecret: 'test_secret',
-            baseUrl: $baseUrl,
-            cache: $this->app['cache']->store(),
-            httpClient: new GuzzleClient(['handler' => HandlerStack::create($this->mockHandler)]),
-            config: [
-                'base_url' => $baseUrl,
-            ]
+            'test_client',
+            'test_secret',
+            $this->app['cache']->store(),
+            new GuzzleClient(['handler' => HandlerStack::create($this->mockHandler)]),
+            '', 
+            $baseUrl
+          
         );
 
         $url = $this->client->generateDocumentPublicUrl($uuid, $longId);

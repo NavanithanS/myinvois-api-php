@@ -11,7 +11,7 @@ use Nava\MyInvois\Exception\ValidationException;
 
 class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
 {
-    private array $defaultOptions = [];
+    private $defaultOptions = [];
 
     /**
      * Create a new MyInvois client instance.
@@ -46,12 +46,12 @@ class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
 
         // Create authentication client
         $authClient = new AuthenticationClient(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            baseUrl: $identityUrl,
-            httpClient: $httpClient,
-            cache: Cache::store(),
-            config: [
+            $clientId,
+            $clientSecret,
+            $identityUrl,
+            $httpClient,
+            Cache::store(),
+            [
                 'cache' => [
                     'enabled' => $options['cache']['enabled'] ?? true,
                     'ttl' => $options['cache']['ttl'] ?? 3600,
@@ -64,16 +64,16 @@ class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
         );
 
         return new MyInvoisClient(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            cache: app('cache')->store(),
-            httpClient: $httpClient,
-            baseUrl: $baseUrl,
-            config: array_merge($options, [
+            $clientId,
+            $clientSecret,
+            app('cache')->store(),
+            $httpClient,
+            $baseUrl,
+            json_encode(array_merge($options, [
                 'auth' => [
                     'client' => $authClient,
                 ],
-            ])
+            ]))
         );
     }
 
@@ -83,13 +83,12 @@ class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
     public function sandbox(
         ?string $clientId = null,
         ?string $clientSecret = null,
-        array $options = []
+        array $option = []
     ): MyInvoisClient {
         return $this->make(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            baseUrl: MyInvoisClient::SANDBOX_URL,
-            options: $options
+            $clientId,
+            $clientSecret,
+            MyInvoisClient::SANDBOX_URL
         );
     }
 
@@ -102,10 +101,9 @@ class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
         array $options = []
     ): MyInvoisClient {
         return $this->make(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            baseUrl: MyInvoisClient::PRODUCTION_URL,
-            options: $options
+            $clientId,
+            $clientSecret,
+            MyInvoisClient::PRODUCTION_URL
         );
     }
 
@@ -133,28 +131,28 @@ class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
 
         // Create intermediary authentication client
         $authClient = new IntermediaryAuthenticationClient(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            baseUrl: $identityUrl,
-            httpClient: $httpClient,
-            cache: Cache::store(),
-            config: $this->getAuthConfig($config)
+            $clientId,
+            $clientSecret,
+            $identityUrl,
+            $httpClient,
+            Cache::store(),
+            $this->getAuthConfig($config)
         );
 
         // Set the taxpayer TIN
         $authClient->onBehalfOf($taxpayerTin);
 
         return new MyInvoisClient(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            cache: app('cache')->store(),
-            httpClient: $httpClient,
-            baseUrl: $baseUrl,
-            config: array_merge($options, [
+            $clientId,
+            $clientSecret,
+            app('cache')->store(),
+            $httpClient,
+            $baseUrl,
+            json_encode(array_merge($options, [
                 'auth' => [
                     'client' => $authClient,
                 ],
-            ])
+            ]))
         );
     }
 
@@ -168,10 +166,10 @@ class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
         array $options = []
     ): MyInvoisClient {
         return $this->intermediary(
-            clientId: $clientId,
-            clientSecret: $clientSecret,
-            taxpayerTin: $taxpayerTin,
-            options: array_merge($options, [
+            $clientId,
+            $clientSecret,
+            $taxpayerTin,
+            array_merge($options, [
                 'baseUrl' => MyInvoisClient::SANDBOX_URL,
             ])
         );

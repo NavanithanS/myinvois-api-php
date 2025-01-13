@@ -10,7 +10,7 @@ use Nava\MyInvois\Tests\TestCase;
 
 class DocumentSearchResultTest extends TestCase
 {
-    private array $validData;
+    private $validData;
 
     protected function setUp(): void
     {
