@@ -7,6 +7,7 @@ use Nava\MyInvois\Enums\DocumentFormat;
 use Nava\MyInvois\Enums\DocumentTypeEnum;
 use Nava\MyInvois\Exception\ApiException;
 use Nava\MyInvois\Exception\ValidationException;
+use Nava\MyInvois\Http\ApiClient;
 use Nava\MyInvois\Traits\RateLimitingTrait;
 use Psr\Log\LoggerInterface;
 use Webmozart\Assert\Assert;
@@ -102,8 +103,8 @@ trait DocumentSubmissionApi
      *
      * @throws ValidationException|ApiException
      */
-    public function submitDocument(array $document, ?string $version = null): array
-    {
+    public function submitDocument(ApiClient $apiClient, array $document, ?string $version = null): array
+    {   
         $this->checkRateLimit('document_submission',
             $this->createRateLimitConfig('submitDocument', 50, 3600)
         );
@@ -123,7 +124,7 @@ trait DocumentSubmissionApi
         ];
 
         // The correct endpoint is /api/v1.0/documentsubmissions (not /documents)
-        return $this->apiClient->request('POST', '/api/v1.0/documentsubmissions', [
+        return $apiClient->request('POST', '/api/v1.0/documentsubmissions', [
             'json' => $document,
         ]);
     }

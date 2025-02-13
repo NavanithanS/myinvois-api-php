@@ -21,6 +21,7 @@ use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Http\ApiClient;
 use Nava\MyInvois\Traits\DateValidationTrait;
 use Nava\MyInvois\Traits\LoggerTrait;
+use Nava\MyInvois\Traits\RateLimitingTrait;
 use Nava\MyInvois\Traits\UuidValidationTrait;
 use Webmozart\Assert\Assert;
 
@@ -41,13 +42,15 @@ use Webmozart\Assert\Assert;
  */
 class MyInvoisClient
 {
+    use RateLimitingTrait;
+
     private $apiClient;
 
     private $clientId;
 
     private $config;
 
-    private $cache;
+    protected $cache;
 
     // use DateValidationTrait;
     // use DocumentDetailsApi;
@@ -78,7 +81,7 @@ class MyInvoisClient
         CacheRepository $cache,
         GuzzleClient $httpClient,
         ApiClient $apiClient,
-        string $baseUrl = self::PRODUCTION_URL,
+        string $baseUrl = self::SANDBOX_URL,
         array $config = []
     ) {
         Assert::notEmpty($clientId, 'Client ID cannot be empty');
@@ -131,6 +134,63 @@ class MyInvoisClient
                 ],
             ])
         );
+    }
+
+    public function submitDocument(array $document, ?string $version = null): array
+    {
+        $this->checkRateLimit('document_submission',
+            $this->createRateLimitConfig('submitDocument', 50, 3600)
+        );
+
+        // Use provided version or current version
+        $version = $version ?? Config::INVOICE_CURRENT_VERSION;
+
+        // Validate version is supported
+        if (!Config::isVersionSupported('invoice', $version)) {
+            throw new ValidationException('Unsupported document version');
+        }
+
+        // Set version in document
+        $document['invoiceTypeCode'] = [
+            'value' => '01', // Invoice type code
+            'listVersionID' => $version,
+        ];
+
+        // The correct endpoint is /api/v1.0/documentsubmissions (not /documents)
+        return $this->apiClient->request('POST', '/api/v1.0/documentsubmissions', [
+            'json' => $document,
+        ]);
+    }
+
+    
+    public function checkTaxpayerTin($ic)
+    {
+        $this->checkRateLimit(
+            'tin_search',
+            $this->createRateLimitConfig('searchTin', 60, 60) // 60 requests per minute
+        );
+
+        // Extract query parameters
+        $queryParams = [
+            'idType' => 'NRIC',
+            'idValue' => $ic,
+        ];
+
+        // Ensure at least one required parameter is present
+        if ((empty($queryParams['idType']) || empty($queryParams['idValue']))) {
+            return response()->json(['error' => 'Either taxpayerName or both idType and idValue must be provided'], 400);
+        }
+
+        // Make API request
+        try {
+            $response = $this->apiClient->request('GET', '/api/v1.0/taxpayer/search/tin', [
+                'query' => array_filter($queryParams), // Remove null values
+            ]);
+
+            return response()->json(json_decode($response->getBody(), true));
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch TIN data', 'message' => $e->getMessage()], 500);
+        }
     }
 
     /**

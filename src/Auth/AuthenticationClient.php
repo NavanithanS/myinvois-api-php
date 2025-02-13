@@ -13,6 +13,7 @@ use Nava\MyInvois\Exception\NetworkException;
 use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Traits\LoggerTrait;
 use Nava\MyInvois\Traits\RateLimitingTrait;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Webmozart\Assert\Assert;
 
@@ -122,7 +123,7 @@ class AuthenticationClient implements AuthenticationClientInterface
         }
     }
 
-    protected function executeAuthRequest(): mixed
+    protected function executeAuthRequest()
     {
         try {
             // Log request details
@@ -186,7 +187,7 @@ class AuthenticationClient implements AuthenticationClientInterface
         }
     }
 
-    protected function parseResponse(mixed $response): array
+    protected function parseResponse(ResponseInterface $response): array
     {
         try {
             $body = (string) $response->getBody();
