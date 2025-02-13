@@ -4,7 +4,7 @@ namespace Nava\MyInvois\Exception;
 
 class ValidationException extends \Exception
 {
-    private array $errors;
+    private $errors;
 
     public function __construct(string $message = '', array $errors = [], int $code = 422, ?\Throwable $previous = null)
     {

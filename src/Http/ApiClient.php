@@ -24,6 +24,7 @@ class ApiClient
     private $httpClient;
     private $cache;
     private $authClient;
+    private $baseUrl;
 
     public function __construct(
         $clientId,
@@ -37,6 +38,7 @@ class ApiClient
         $this->httpClient = $httpClient;
         $this->cache = $cache;
         $this->authClient = $authClient;
+        $this->baseUrl = $baseUrl;
     }
 
     /**
@@ -86,7 +88,6 @@ class ApiClient
                         if ($this->shouldRetry($exception)) {
                             return $this->retryRequest($method, $endpoint, $options);
                         }
-
                         return $this->handleRequestException($exception);
                     }
                 );
