@@ -2,7 +2,6 @@
 
 namespace Nava\MyInvois;
 
-use Carbon\Carbon;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Nava\MyInvois\Api\DocumentDetailsApi;
@@ -25,11 +24,6 @@ use Nava\MyInvois\Traits\LoggerTrait;
 use Nava\MyInvois\Traits\RateLimitingTrait;
 use Nava\MyInvois\Traits\UuidValidationTrait;
 use Webmozart\Assert\Assert;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Http\Request;
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\PngWriter;
-use Illuminate\Http\Response;
 
 /**
  * MyInvois API Client
@@ -51,38 +45,12 @@ class MyInvoisClient
     use RateLimitingTrait;
 
     private $apiClient;
-    private $utcTime;
-    private $document;
-    private $signature = '';
-    private $invoiceNo;
-    private $dateFrom;
-    private $dateTo;
-    private $supplierTIN;
-    private $supplierIC;
-    private $buyerTIN;
-    private $buyerIC;
-    private $buyerName;
-    private $buyerPhone;
-    private $buyerEmail;
-    private $buyerCity;
-    private $buyerPostcode;
-    private $buyerStateCode;
-    private $totalPay;
-    private $certDoc;
-    private $certSN;
-    private $certDigest;
-    private $certValue;
-    private $certProps;
-    private $buyerAddress1;
-    private $buyerAddress2;
-    private $stateMapping;
-    private $client;
 
-    // private $clientId;
+    private $clientId;
 
-    // private $config;
+    private $config;
 
-    // protected $cache;
+    protected $cache;
 
     // use DateValidationTrait;
     // use DocumentDetailsApi;
@@ -107,490 +75,75 @@ class MyInvoisClient
 
     public const IDENTITY_SANDBOX_URL = 'https://preprod-api.myinvois.hasil.gov.my/connect/token';
 
-    public function __construct()
-    {
-        Assert::notEmpty(config('myinvois.client_id'), 'Myinvois client ID cannot be empty');
-        Assert::notEmpty(config('myinvois.client_secret'), 'Myinvois client secret cannot be empty');
-        Assert::notEmpty(config('myinvois.base_url'), 'Myinvois base url cannot be empty');
-        Assert::notEmpty(config('myinvois.sslcert_path'), 'Myinvois sslcert path cannot be empty');
+    public function __construct(
+        string $clientId,
+        string $clientSecret,
+        CacheRepository $cache,
+        GuzzleClient $httpClient,
+        ApiClient $apiClient,
+        string $baseUrl = self::SANDBOX_URL,
+        array $config = []
+    ) {
+        Assert::notEmpty($clientId, 'Client ID cannot be empty');
+        Assert::notEmpty($clientSecret, 'Client secret cannot be empty');
 
-        $this->cache = Cache::store();
+        $this->apiClient = $apiClient;
+        $this->clientId = $clientId;
+        $this->config = $config;
+        $this->cache = $cache;
 
-        // Create GuzzleHttp client
-        $httpClient = new GuzzleClient([
-            'verify' => config('myinvois.sslcert_path'),
-            'timeout' => 30,
-            'connect_timeout' => 10,
-        ]);
+        // Determine the identity service URL based on the API URL
+        $identityUrl = str_contains($baseUrl, 'preprod')
+        ? self::IDENTITY_SANDBOX_URL
+        : self::IDENTITY_PRODUCTION_URL;
 
-        // Create authentication client
         $authClient = new AuthenticationClient(
-            config('myinvois.client_id'),
-            config('myinvois.client_secret'),
-            config('myinvois.base_url'),
+            $clientId,
+            $clientSecret,
+            $identityUrl,
             $httpClient,
-            Cache::store(),
-            [
+            $cache,
+            array_merge([
+                'cache' => [
+                    'enabled' => $config['cache']['enabled'] ?? true,
+                    'ttl' => $config['cache']['ttl'] ?? 3600,
+                ],
                 'logging' => [
-                    'enabled' => true,
-                    'channel' => 'myinvois',
+                    'enabled' => $config['logging']['enabled'] ?? true,
+                    'channel' => $config['logging']['channel'] ?? 'stack',
                 ],
-                'http' => [
-                    'timeout' => 30,
-                    'connect_timeout' => 10,
-                    'retry' => [
-                        'times' => 3,
-                        'sleep' => 1000,
-                    ],
-                ],
-            ]
+            ], $config)
         );
 
+        // Configure the API client with authentication settings
         $this->apiClient = new ApiClient(
-            config('myinvois.client_id'),
-            config('myinvois.client_secret'),
-            config('myinvois.base_url'),
+            $clientId,
+            $clientSecret,
+            $baseUrl,
             $httpClient,
-            Cache::store(),
+            $cache,
             $authClient,
-            [
-                'logging' => [
-                    'enabled' => true,
-                    'channel' => 'myinvois',
+            array_merge($config, [
+                'auth' => [
+                    'url' => $identityUrl,
                 ],
-            ]
+                'cache' => [
+                    'enabled' => $config['cache']['enabled'] ?? true,
+                    'store' => $cache,
+                    'ttl' => $config['cache']['ttl'] ?? 3600,
+                ],
+            ])
         );
-
-        $authClient->authenticate();
-
-        $this->supplierTIN = "IG5574752030";
-        $this->supplierIC = "770225075371";
-        // $this->buyerTIN = "IG50207950090";
-        // $this->buyerIC = "000716070507";
-        $this->utcTime = Carbon::now('UTC')->toTimeString() . "Z";
-
-        $this->document = [
-            "Invoice" => [
-                [
-                    "ID" => [["_" => $this->invoiceNo]],
-                    "IssueDate" => [["_" => Carbon::now()->toDateString()]],
-                    "IssueTime" => [["_" => $this->utcTime]],
-                    "InvoiceTypeCode" => [["_" => "01", "listVersionID" => "1.1"]],
-                    "DocumentCurrencyCode" => [["_" => "MYR"]],
-                    "TaxCurrencyCode" => [["_" => "MYR"]],
-                    "InvoicePeriod" => [
-                        [
-                            "StartDate" => [["_" => $this->dateFrom]],
-                            "EndDate" => [["_" => $this->dateTo]],
-                            "Description" => [["_" => "Monthly"]]
-                        ]
-                    ],
-                    "AccountingSupplierParty" => [
-                        [
-                            "Party" => [
-                                [
-                                    "IndustryClassificationCode" => [["_" => "46510", "name" => "Wholesale of computer hardware, software and peripherals"]],
-                                    "PartyIdentification" => [
-                                        ["ID" => [["_" => $this->supplierTIN, "schemeID" => "TIN"]]],
-                                        ["ID" => [["_" => $this->supplierIC, "schemeID" => "NRIC"]]],
-                                        ["ID" => [["_" => "NA", "schemeID" => "SST"]]],
-                                        ["ID" => [["_" => "NA", "schemeID" => "TTX"]]]
-                                    ],
-                                    "PostalAddress" => [
-                                        [
-                                            "CityName" => [["_" => "Kuala Lumpur"]],
-                                            "PostalZone" => [["_" => "50480"]],
-                                            "CountrySubentityCode" => [["_" => "10"]],
-                                            "AddressLine" => [["Line" => [["_" => "NA"]]]],
-                                            "Country" => [["IdentificationCode" => [["_" => "MYS", "listID" => "ISO3166-1", "listAgencyID" => "6"]]]]
-                                        ]
-                                    ],
-                                    "PartyLegalEntity" => [
-                                        ["RegistrationName" => [["_" => "Suppliers Name"]]]
-                                    ],
-                                    "Contact" => [
-                                        [
-                                            "Telephone" => [["_" => "+60-123456789"]],
-                                            "ElectronicMail" => [["_" => "supplier@email.com"]]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ],
-                    "AccountingCustomerParty" => [
-                        [
-                            "Party" => [
-                                [
-                                    "PostalAddress" => [
-                                        [
-                                            "CityName" => [["_" => $this->buyerCity]],
-                                            "PostalZone" => [["_" => $this->buyerPostcode]],
-                                            "CountrySubentityCode" => [["_" => $this->buyerStateCode]],
-                                            "AddressLine" => [["Line" => [["_" => $this->buyerAddress1 . $this->buyerAddress2]]]],
-                                            "Country" => [["IdentificationCode" => [["_" => "MYS", "listID" => "ISO3166-1", "listAgencyID" => "6"]]]]
-                                        ]
-                                    ],
-                                    "PartyLegalEntity" => [
-                                        ["RegistrationName" => [["_" => $this->buyerName]]]
-                                    ],
-                                    "PartyIdentification" => [
-                                        ["ID" => [["_" => $this->buyerTIN, "schemeID" => "TIN"]]],
-                                        ["ID" => [["_" => $this->buyerIC, "schemeID" => "NRIC"]]],
-                                        ["ID" => [["_" => "NA", "schemeID" => "SST"]]],
-                                        ["ID" => [["_" => "NA", "schemeID" => "TTX"]]]
-                                    ],
-                                    "Contact" => [
-                                        [
-                                            "Telephone" => [["_" => $this->buyerPhone]],
-                                            "ElectronicMail" => [["_" => $this->buyerEmail]]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ],
-                    "TaxTotal" => [
-                        [
-                            "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                            "TaxSubtotal" => [
-                                [
-                                    "TaxableAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                    "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                    "TaxCategory" => [
-                                        ["ID" => [["_" => "01"]], "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ],
-                    "LegalMonetaryTotal" => [
-                        [
-                            "TaxExclusiveAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]],
-                            "TaxInclusiveAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]],
-                            "PayableAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]]
-                        ]
-                    ],
-                    "InvoiceLine" => [
-                        [
-                            "ID" => [["_" => $this->invoiceNo]],
-                            "LineExtensionAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]],
-                            "TaxTotal" => [
-                                [
-                                    "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                    "TaxSubtotal" => [
-                                        [
-                                            "TaxableAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                            "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                            "Percent" => [["_" => 0]],
-                                            "TaxCategory" => [
-                                                ["ID" => [["_" => "06"]], "TaxExemptionReason" => [["_" => ""]], "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]]
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ],
-                            "Item" => [
-                                [
-                                    "CommodityClassification" => [["ItemClassificationCode" => [["_" => "003", "listID" => "CLASS"]]]],
-                                    "Description" => [["_" => "Laptop Peripherals"]]
-                                ]
-                            ],
-                            "Price" => [
-                                ["PriceAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]]]
-                            ],
-                            "ItemPriceExtension" => [
-                                ["Amount" => [["_" => $this->totalPay, "currencyID" => "MYR"]]]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ];
-
-        $this->signature = [
-            "UBLExtensions" => [
-                [
-                    "UBLExtension" => [
-                        [
-                            "ExtensionURI" => [["_" => "urn:oasis:names:specification:ubl:dsig:enveloped:xades"]],
-                            "ExtensionContent" => [
-                                [
-                                    "UBLDocumentSignatures" => [
-                                        [
-                                            "SignatureInformation" => [
-                                                [
-                                                    "ID" => [["_" => "urn:oasis:names:specification:ubl:signature:1"]],
-                                                    "ReferencedSignatureID" => [["_" => "urn:oasis:names:specification:ubl:signature:Invoice"]],
-                                                    "Signature" => [
-                                                        [
-                                                            "Id" => "signature",
-                                                            "Object" => [
-                                                                [
-                                                                    "QualifyingProperties" => [
-                                                                        [
-                                                                            "Target" => "signature",
-                                                                            "SignedProperties" => [
-                                                                                [
-                                                                                    "Id" => "id-xades-signed-props",
-                                                                                    "SignedSignatureProperties" => [
-                                                                                        [
-                                                                                            "SigningTime" => [["_" => $this->utcTime]],
-                                                                                            "SigningCertificate" => [
-                                                                                                [
-                                                                                                    "Cert" => [
-                                                                                                        [
-                                                                                                            "CertDigest" => [
-                                                                                                                [
-                                                                                                                    "DigestMethod" => [["_" => "", "Algorithm" => "http://www.w3.org/2001/04/xmlenc#sha256"]],
-                                                                                                                    "DigestValue" => [["_" => $this->certDigest]]
-                                                                                                                ]
-                                                                                                            ],
-                                                                                                            "IssuerSerial" => [
-                                                                                                                [
-                                                                                                                    "X509IssuerName" => [["_" => "CN=Trial LHDNM Sub CA V1, OU=Terms of use at http://www.posdigicert.com.my, O=LHDNM, C=MY"]],
-                                                                                                                    "X509SerialNumber" => [["_" => $this->certSN]]
-                                                                                                                ]
-                                                                                                            ]
-                                                                                                        ]
-                                                                                                    ]
-                                                                                                ]
-                                                                                            ]
-                                                                                        ]
-                                                                                    ]
-                                                                                ]
-                                                                            ]
-                                                                        ]
-                                                                    ]
-                                                                ]
-                                                            ]
-                                                        ]
-                                                    ]
-                                                ]
-                                            ],
-                                            "KeyInfo" => [
-                                                [
-                                                    "X509Data" => [
-                                                        [
-                                                            "X509Certificate" => [["_" => ""]],
-                                                            "X509SubjectName" => [["_" => "CN=Trial LHDNM Sub CA V1, OU=Terms of use at http://www.posdigicert.com.my, O=LHDNM, C=MY"]],
-                                                            "X509IssuerSerial" => [
-                                                                [
-                                                                    "X509IssuerName" => [["_" => "CN=Trial LHDNM Sub CA V1, OU=Terms of use at http://www.posdigicert.com.my, O=LHDNM, C=MY"]],
-                                                                    "X509SerialNumber" => [["_" => $this->certSN]]
-                                                                ]
-                                                            ]
-                                                        ]
-                                                    ]
-                                                ]
-                                            ],
-                                            "SignatureValue" => [["_" => $this->certValue]],
-                                            "SignedInfo" => [
-                                                [
-                                                    "SignatureMethod" => [["_" => "", "Algorithm" => "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"]],
-                                                    "Reference" => [
-                                                        [
-                                                            "Type" => "http://uri.etsi.org/01903/v1.3.2#SignedProperties",
-                                                            "URI" => "#id-xades-signed-props",
-                                                            "DigestMethod" => [["_" => "", "Algorithm" => "http://www.w3.org/2001/04/xmlenc#sha256"]],
-                                                            "DigestValue" => [["_" => $this->certProps]]
-                                                        ],
-                                                        [
-                                                            "Type" => "",
-                                                            "URI" => "",
-                                                            "DigestMethod" => [["_" => "", "Algorithm" => "http://www.w3.org/2001/04/xmlenc#sha256"]],
-                                                            "DigestValue" => [["_" => $this->certDoc]]
-                                                        ]
-                                                    ]
-                                                ]
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ],
-            "Signature" => [
-                [
-                    "ID" => [["_" => "urn:oasis:names:specification:ubl:signature:Invoice"]],
-                    "SignatureMethod" => [["_" => "urn:oasis:names:specification:ubl:dsig:enveloped:xades"]]
-                ]
-            ]
-        ];
-
-        $this->stateMapping = [
-            'Johor' => '01',
-            'Kedah' => '02',
-            'Kelantan' => '03',
-            'Melaka' => '04',
-            'Negeri Sembilan' => '05',
-            'Pahang' => '06',
-            'Pulau Pinang' => '07',
-            'Perak' => '08',
-            'Perlis' => '09',
-            'Selangor' => '10',
-            'Terengganu' => '11',
-            'Sabah' => '12',
-            'Sarawak' => '13',
-            'Wilayah Persekutuan Kuala Lumpur' => '14',
-            'Wilayah Persekutuan Labuan' => '15',
-            'Wilayah Persekutuan Putrajaya' => '16',
-            'Not Applicable' => '17',
-        ];
     }
 
-    public function createDocument(Request $request)
+    public function submitDocument(array $document, ?string $version = null): array
     {
-        $this->totalPay = $request->input('total_amount');
-        $this->invoiceNo = $request->input('invoice_no');
-        $this->dateFrom = $request->input('date_from');
-        $this->dateTo = $request->input('date_to');
-        $this->buyerIC = $request->input('identification_no');
-        $this->buyerTIN = $request->input('identification_tin');
-        $this->buyerName = $request->input('name');
-        $this->buyerPhone = $request->input('phone_number');
-        $this->buyerEmail = $request->input('email');
-        $this->buyerAddress1 = $request->input('address_1');
-        $this->buyerAddress2 = $request->input('address_2');
-        $this->buyerPostcode = $request->input('postcode');
-        $this->buyerCity = $request->input('city');
-        $this->buyerStateCode = $this->stateMapping[$request->input('state')] ?? null;
-
-        // Check if decoding was successful
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            die("JSON Decode Error: " . json_last_error_msg());
-        }
-
-        // Check if 'InvoiceLine' exists and merge the signature array
-        if (isset($this->document['Invoice'][0]['InvoiceLine'])) {
-            $this->document['Invoice'][0] = array_merge($this->document['Invoice'][0], $this->signature);
-        }
-
-        // Convert back to JSON format
-        $updatedDocument = json_encode($this->document, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-
-        $hash = hash('sha256', $updatedDocument, true); // true for raw binary output
-        $docdigest = base64_encode($hash);
-
-        echo "DocDigest: " . $docdigest . PHP_EOL;
-        $this->certDoc = $docdigest;
-
-        $privateKeyPem = 'C:/Users/Lee Guang You/Desktop/BioE/Smart-Metering/smart-metering/app/Http/Controllers/Paynet/private_key.pem'; // Load private key
-
-        $privateKey = file_get_contents($privateKeyPem);
-        if (!$privateKey) {
-            die("Failed to read private key file.");
-        }
-
-        $passphrase = "";
-        $privateKeyResource = openssl_pkey_get_private($privateKey, $passphrase);
-        if (!$privateKeyResource) {
-            die("Failed to load private key: " . openssl_error_string());
-        }
-
-        // Sign the document digest
-        openssl_sign($hash, $this->signature, $privateKey, OPENSSL_ALGO_SHA256);
-        $signatureBase64 = base64_encode($this->signature);
-
-        echo "Sig: " . $signatureBase64 . PHP_EOL;
-        $this->certValue = $signatureBase64;
-
-        $certificatePem = file_get_contents('C:\Program Files\OpenSSL-Win64\bin\public_key.cer'); // Load certificate
-
-        $certificate = openssl_x509_read($certificatePem);
-        if (!$certificate) {
-            die("Failed to load certificate");
-        }
-
-        $certInfo = openssl_x509_parse($certificate);
-        echo "X509 Serial Number: " . $certInfo['serialNumber'] . "\n";
-        $this->certSN = $certInfo['serialNumber'];
-
-        // Get the certificate in DER format
-        openssl_x509_export($certificate, $certData);
-        $certData = str_replace(["-----BEGIN CERTIFICATE-----", "-----END CERTIFICATE-----", "\n", "\r"], '', $certData);
-        $certBinary = base64_decode($certData);
-
-        // Compute SHA-256 hash of the certificate
-        $certHash = hash('sha256', $certBinary, true);
-        $certDigest = base64_encode($certHash);
-
-        echo "CertDigest: " . $certDigest . PHP_EOL;
-        $this->certDigest = $certDigest;
-
-        $signedProperties = [
-            "Target" => "signature",
-            "SignedProperties" => [
-                [
-                    "Id" => "id-xades-signed-props",
-                    "SignedSignatureProperties" => [
-                        [
-                            "SigningTime" => [["_" => $this->utcTime]],
-                            "SigningCertificate" => [
-                                [
-                                    "Cert" => [
-                                        [
-                                            "CertDigest" => [
-                                                [
-                                                    "DigestMethod" => [["_" => "", "Algorithm" => "http://www.w3.org/2001/04/xmlenc#sha256"]],
-                                                    "DigestValue" => [["_" => $this->certDigest]]
-                                                ]
-                                            ],
-                                            "IssuerSerial" => [
-                                                [
-                                                    "X509IssuerName" => [["_" => "CN=Trial LHDNM Sub CA V1, OU=Terms of use at http://www.posdigicert.com.my, O=LHDNM, C=MY"]],
-                                                    "X509SerialNumber" => [["_" => $this->certSN]]
-                                                ]
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ];
-        $signedPropsJson = json_encode($signedProperties, JSON_UNESCAPED_SLASHES);
-        $signedPropsHash = hash('sha256', $signedPropsJson, true);
-        $signedPropsDigest = base64_encode($signedPropsHash);
-
-        echo "PropsDigest: " . $signedPropsDigest . PHP_EOL;
-        $this->certProps = $signedPropsDigest;
-
-        $this->submitDocument($updatedDocument);
-    }
-
-    public function submitDocument($updatedDocument, ?string $version = null): array
-    {
-        // Step 1: Convert to JSON and Base64 encode
-        // $jsonEncoded = json_encode($document, JSON_UNESCAPED_SLASHES);
-        $base64Encoded = base64_encode($updatedDocument);
-
-        // Step 2: Generate SHA-256 hash
-        $documentHash = hash('sha256', $updatedDocument);
-
-        // Step 3: Prepare new request format
-        $requestData = [
-            "documents" => [
-                [
-                    "format" => "JSON",
-                    "documentHash" => $documentHash,
-                    "codeNumber" => "INV00000002",
-                    "document" => $base64Encoded
-                ]
-            ]
-        ];
-
-        $this->checkRateLimit(
-            'document_submission',
+        $this->checkRateLimit('document_submission',
             $this->createRateLimitConfig('submitDocument', 50, 3600)
         );
 
         // Use provided version or current version
-        // $version = $version ?? Config::INVOICE_CURRENT_VERSION;
+        $version = $version ?? Config::INVOICE_CURRENT_VERSION;
 
         // Validate version is supported
         if (!Config::isVersionSupported('invoice', $version)) {
@@ -598,87 +151,46 @@ class MyInvoisClient
         }
 
         // Set version in document
-        $requestData['invoiceTypeCode'] = [
+        $document['invoiceTypeCode'] = [
             'value' => '01', // Invoice type code
             'listVersionID' => $version,
         ];
 
         // The correct endpoint is /api/v1.0/documentsubmissions (not /documents)
         return $this->apiClient->request('POST', '/api/v1.0/documentsubmissions', [
-            'json' => $requestData,
+            'json' => $document,
         ]);
     }
 
-    public function getTaxpayerTin($ic)
+    
+    public function checkTaxpayerTin($ic)
     {
         $this->checkRateLimit(
             'tin_search',
             $this->createRateLimitConfig('searchTin', 60, 60) // 60 requests per minute
         );
 
-        if (empty($ic)) {
-            throw new \InvalidArgumentException('idValue (NRIC) must be provided');
+        // Extract query parameters
+        $queryParams = [
+            'idType' => 'NRIC',
+            'idValue' => $ic,
+        ];
+
+        // Ensure at least one required parameter is present
+        if ((empty($queryParams['idType']) || empty($queryParams['idValue']))) {
+            return response()->json(['error' => 'Either taxpayerName or both idType and idValue must be provided'], 400);
         }
 
-        $response = $this->apiClient->request('GET', '/api/v1.0/taxpayer/search/tin', [
-            'query' => [
-                'idType' => 'NRIC',
-                'idValue' => $ic
-            ]
-        ]);
+        // Make API request
+        try {
+            $response = $this->apiClient->request('GET', '/api/v1.0/taxpayer/search/tin', [
+                'query' => array_filter($queryParams), // Remove null values
+            ]);
 
-        return $response;
-    }
-
-    public function validateTaxpayerTin(string $tin, string $idValue)
-    {
-        // Validate input parameters
-        if (empty($tin) || empty($idValue)) {
-            throw new \InvalidArgumentException('TIN, idType, and idValue must be provided.');
+            return response()->json(json_decode($response->getBody(), true));
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch TIN data', 'message' => $e->getMessage()], 500);
         }
-
-        // Make the API request
-        $response = $this->apiClient->request('GET', "/api/v1.0/taxpayer/validate/{$tin}", [
-            'query' => [
-                'idType'  => 'NRIC',
-                'idValue' => $idValue
-            ]
-        ]);
-        return $response;
-    }
-
-    public function getDocument($uuid)
-    {
-        // Validate input parameters
-        if (empty($uuid)) {
-            throw new \InvalidArgumentException('Uuid must be provided.');
-        }
-
-        // Make the API request
-        $response = $this->apiClient->request('GET', "/api/v1.0/documents/{$uuid}/raw");
-
-        // Return only the longId
-        return $response['longId'] ?? null; // Return null if longId is not found
-    }
-
-    public function generateQrCode($uuid)
-    {
-        $baseUrl = config('myinvois.base_url');
-        $longid = $this->getDocument($uuid);
-
-        $url = "{$baseUrl}/{$uuid}/share/{$longid}";
-        // $url = 'https://www.google.com';
-
-        // Create QR Code
-        $qrCode = new QrCode($url);
-        $qrCode->setSize(300); // Set QR Code size
-        $qrCode->setMargin(10); // Set margin
-
-        // Get QR Code as PNG binary data
-        $pngData = $qrCode->writeString(); // Version 3.5.9 uses writeString() instead of write()
-
-        // Encode as Base64
-        return 'data:image/png;base64,' . base64_encode($pngData);
     }
 
     /**
@@ -752,12 +264,11 @@ class MyInvoisClient
      *
      * @throws ApiException
      */
-    public function cancelDocument(string $documentId)
+    public function cancelDocument(string $documentId, string $reason): array
     {
-        return $this->apiClient->request('PUT', "/api/v1.0/documents/state/{$documentId}/state", [
+        return $this->apiClient->request('POST', "/documents/{$documentId}/cancel", [
             'json' => [
-                'status' => 'cancelled',
-                'reason' => 'Wrong invoice details',
+                'reason' => $reason,
             ],
         ]);
     }
@@ -1021,10 +532,7 @@ class DocumentFilterPreparer
         // Handle status filter with validation
         if (isset($filters['status'])) {
             Assert::inArray($filters['status'], [
-                'PENDING',
-                'COMPLETED',
-                'FAILED',
-                'CANCELLED',
+                'PENDING', 'COMPLETED', 'FAILED', 'CANCELLED',
             ], 'Invalid status value');
             $prepared['status'] = $filters['status'];
         }

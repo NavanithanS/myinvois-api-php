@@ -84,18 +84,10 @@ class ApiClient
                     function (ResponseInterface $response) {
                         return $this->handleResponse($response);
                     },
-                    function (\Throwable $exception) use ($method, $endpoint, $options) {
-                        if ($exception instanceof RequestException && $this->shouldRetry($exception)) {
+                    function (RequestException $exception) use ($method, $endpoint, $options) {
+                        if ($this->shouldRetry($exception)) {
                             return $this->retryRequest($method, $endpoint, $options);
                         }
-
-                        // Log any exception for debugging
-                        \Log::error("API request failed: " . $exception->getMessage(), [
-                            'method' => $method,
-                            'endpoint' => $endpoint,
-                            'options' => $options
-                        ]);
-
                         return $this->handleRequestException($exception);
                     }
                 );
@@ -136,14 +128,7 @@ class ApiClient
      */
     private function handleResponse(ResponseInterface $response): array
     {
-
         $body = (string) $response->getBody();
-
-        // If the body is empty, return a default response
-        if (empty(trim($body))) {
-            return ['status' => 200];
-        }
-
         $data = json_decode($body, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -186,18 +171,8 @@ class ApiClient
      *
      * @throws ApiException|AuthenticationException|NetworkException|ValidationException
      */
-    private function handleRequestException(\Throwable $e)
+    private function handleRequestException(RequestException $e): never
     {
-        // If it's not a RequestException, log and rethrow it.
-        if (!$e instanceof RequestException) {
-            \Log::error('Unexpected exception in API request: ' . $e->getMessage(), [
-                'exception' => get_class($e),
-                'trace' => $e->getTraceAsString()
-            ]);
-            error_log($e->getMessage());
-            throw new ApiException('Unexpected error occurred', 500, $e);
-        }
-
         $response = $e->getResponse();
         if (!$response) {
             throw new NetworkException(
@@ -215,64 +190,31 @@ class ApiClient
                 $response->getStatusCode(),
                 $e
             );
-        }
+        }        
 
         $statusCode = $response->getStatusCode();
         $message = $body['error'] ?? $body['error_description'] ?? 'Unknown error occurred';
 
         switch ($statusCode) {
-            case 400:
-                $errorMessage = is_array($body['error'] ?? null)
-                    ? json_encode($body['error'])  // Convert array to JSON string
-                    : ($body['error'] ?? 'Invalid input parameters');
-
-                return ['status' => 400, 'message' => $errorMessage];
-
-                // throw new ApiException(
-                //     'Bad Request: ' . $errorMessage,
-                //     400,
-                //     $e
-                // );
-
-            case 404:
-                return ['status' => 404, 'message' => 'No TIN found for the given search parameters.'];
-
-                // throw new ApiException(
-                //     'No TIN found for the given search parameters.',
-                //     404,
-                //     $e
-                // );
-
             case 422:
-                // throw new ValidationException(
-                //     $message,
-                //     $body['errors'] ?? [],
-                //     422,
-                //     $e
-                // );
-
-                return ['status' => 422, 'message' => $message];
+                throw new ValidationException(
+                    $message,
+                    $body['errors'] ?? [],
+                    $statusCode,
+                    $e
+                );
 
             case 401:
                 $this->accessToken = null;
                 $this->tokenExpires = null;
-                // throw new AuthenticationException($message, 401, $e);
-
-                return ['status' => 401, 'message' => $message];
-
+                throw new AuthenticationException($message, $statusCode, $e);
             case 429:
-                // throw new ApiException('Rate limit exceeded', 429, $e);
-
-                return ['status' => 429, 'message' => 'Rate limit exceeded'];
-
+                throw new ApiException('Rate limit exceeded', 429, $e);
             default:
                 $responseData = json_decode($response->getBody()->getContents(), true);
-                $message = isset($responseData['error'])
-                    ? (is_array($responseData['error']) ? json_encode($responseData['error']) : $responseData['error'])
-                    : $response->getReasonPhrase();
-                // throw new ApiException($message, $statusCode, $e);
-                return ['status' => $statusCode, 'message' => $message];
-            }
+                $message = isset($responseData['error']) ? (is_array($responseData['error']) ? json_encode($responseData['error']) : $responseData['error']) : $response->getReasonPhrase();
+                throw new ApiException($message, $statusCode, $e);
+        }
     }
 
     /**
