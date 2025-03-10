@@ -20,10 +20,10 @@ A robust PHP client library for interacting with Malaysia's MyInvois API for tax
 
 ## Requirements
 
--   PHP 8.1 or higher
--   OpenSSL PHP Extension
+-   PHP 7.1 or higher
 -   JSON PHP Extension
--   Composer 2.0+
+-   OpenSSL PHP Extension
+-   Composer
 
 ## Installation
 
@@ -46,17 +46,33 @@ $client = $factory->production(
 );
 
 // Submit a document
-$response = $client->submitDocument([
-    'invoiceNumber' => 'INV-001',
-    'issueDate' => '2024-01-01',
-    'totalAmount' => 1000.00,
-    'items' => [
-        [
-            'description' => 'Product A',
-            'quantity' => 2,
-            'unitPrice' => 500.00,
-        ]
-    ]
+$response = $client->createDocument([
+    'invoice_no' => 'INV-001',
+    'date_from' => '2024-01-01',
+    'date_to' => '2024-01-31',
+    'total_amount' => 1000.00,
+    'supplierTIN' => 'C1234567890',
+    'supplierIC' => 'IC12345678',
+    'supplierIdType' => 'NRIC',
+    'supplierName' => 'Supplier Company',
+    'supplierPhone' => '0123456789',
+    'supplierEmail' => 'supplier@example.com',
+    'supplierAddress1' => '123 Supplier Street',
+    'supplierAddress2' => 'Supplier Area',
+    'supplierPostcode' => '50000',
+    'supplierCity' => 'Kuala Lumpur',
+    'supplierState' => 'Wilayah Persekutuan Kuala Lumpur',
+    'buyerTIN' => 'C0987654321',
+    'buyerIC' => 'IC87654321',
+    'buyerIdType' => 'NRIC',
+    'buyerName' => 'Buyer Company',
+    'buyerPhone' => '9876543210',
+    'buyerEmail' => 'buyer@example.com',
+    'buyerAddress1' => '456 Buyer Street',
+    'buyerAddress2' => 'Buyer Area',
+    'buyerPostcode' => '40000',
+    'buyerCity' => 'Shah Alam',
+    'buyerState' => 'Selangor'
 ]);
 
 // Check document status
@@ -88,7 +104,12 @@ php artisan vendor:publish --provider="Nava\MyInvois\Laravel\MyInvoisServiceProv
 ```env
 MYINVOIS_CLIENT_ID=your_client_id
 MYINVOIS_CLIENT_SECRET=your_client_secret
-MYINVOIS_BASE_URL=https://api.myinvois.com
+MYINVOIS_BASE_URL=https://preprod.myinvois.hasil.gov.my
+MYINVOIS_SSLCERT_PATH=/path/to/ssl/cert.pem
+MYINVOIS_SIGNSIG_PATH=/path/to/signed/signature.pem
+MYINVOIS_PRIVATEKEY_PATH=/path/to/private/key.pem
+MYINVOIS_SUPPLIER_TIN=C1234567890
+MYINVOIS_SUPPLIER_IC=IC12345678
 ```
 
 4. Use the facade:
@@ -96,9 +117,12 @@ MYINVOIS_BASE_URL=https://api.myinvois.com
 ```php
 use MyInvois;
 
-$documents = MyInvois::getDocuments([
-    'startDate' => '2024-01-01',
-    'endDate' => '2024-01-31'
+$response = MyInvois::createDocument([
+    'invoice_no' => 'INV-001',
+    'date_from' => '2024-01-01',
+    'date_to' => '2024-01-31',
+    'total_amount' => 1000.00,
+    // Additional required fields as shown in Quick Start
 ]);
 ```
 
@@ -106,43 +130,44 @@ $documents = MyInvois::getDocuments([
 
 ### Document Submission
 
-Submit single documents or batches:
+Submit documents with all required fields:
 
 ```php
-// Single document
-$response = $client->submitDocument([
-    'documentType' => DocumentTypeEnum::INVOICE,
-    'format' => DocumentFormat::JSON,
-    'content' => [
-        'invoiceNumber' => 'INV-001',
-        // ... other fields
-    ]
+// Create a Request object with document data
+$request = new \Illuminate\Http\Request();
+$request->merge([
+    'invoice_no' => 'INV-002',
+    'date_from' => '2024-02-01',
+    'date_to' => '2024-02-29',
+    'total_amount' => 2500.00,
+    'supplierTIN' => 'C1234567890',
+    'supplierIC' => 'IC12345678',
+    'supplierIdType' => 'NRIC',
+    'supplierName' => 'Supplier Company',
+    // Complete all required fields
 ]);
 
-// Batch submission
-$response = $client->submitDocuments([
-    [
-        'documentType' => DocumentTypeEnum::INVOICE,
-        'content' => [...],
-    ],
-    [
-        'documentType' => DocumentTypeEnum::CREDIT_NOTE,
-        'content' => [...],
-    ]
-]);
+$response = $client->createDocument($request);
 ```
 
-### Document Search
-
-Search with filters:
+### Document Retrieval
 
 ```php
-$documents = $client->searchDocuments([
-    'dateFrom' => '2024-01-01',
-    'dateTo' => '2024-01-31',
-    'status' => 'Valid',
-    'type' => DocumentTypeEnum::INVOICE
-]);
+// Get document by UUID
+$document = $client->getDocument('ABC12345DEFGHI');
+
+// Generate QR code for a document
+$qrCode = $client->generateQrCode('ABC12345DEFGHI');
+```
+
+### Taxpayer Validation
+
+```php
+// Validate taxpayer TIN with secondary identification
+$isValid = $client->validateTaxpayerTin('NRIC', 'C1234567890', 'IC12345678');
+
+// Search for a taxpayer's TIN
+$tinInfo = $client->getTaxpayerTin('NRIC', 'IC12345678');
 ```
 
 ### Error Handling
@@ -155,7 +180,7 @@ use Nava\MyInvois\Exception\AuthenticationException;
 use Nava\MyInvois\Exception\ApiException;
 
 try {
-    $result = $client->submitDocument($doc);
+    $result = $client->createDocument($request);
 } catch (ValidationException $e) {
     // Handle validation errors
     $errors = $e->getErrors();
@@ -166,27 +191,52 @@ try {
 }
 ```
 
-### Configuration Options
+## Configuration Options
+
+When creating a client, you can pass additional options:
 
 ```php
-$factory->configure([
-    'cache' => [
-        'enabled' => true,
-        'store' => 'redis',
-        'ttl' => 3600
-    ],
-    'logging' => [
-        'enabled' => true,
-        'channel' => 'myinvois'
-    ],
-    'http' => [
-        'timeout' => 30,
-        'retry' => [
-            'times' => 3,
-            'sleep' => 1000
+$factory = new MyInvoisClientFactory();
+$client = $factory->make(
+    'your_client_id',
+    'your_client_secret',
+    'https://preprod.myinvois.hasil.gov.my',
+    null,
+    [
+        'cache' => [
+            'enabled' => true,
+            'ttl' => 3600 // 1 hour
+        ],
+        'logging' => [
+            'enabled' => true,
+            'channel' => 'myinvois'
+        ],
+        'http' => [
+            'timeout' => 30,
+            'retry' => [
+                'times' => 3,
+                'sleep' => 1000
+            ]
         ]
     ]
-]);
+);
+```
+
+## Environments
+
+```php
+// Production
+$client = $factory->production('your_client_id', 'your_client_secret');
+
+// Sandbox
+$client = $factory->sandbox('your_client_id', 'your_client_secret');
+
+// Intermediary (for service providers)
+$client = $factory->intermediary(
+    'your_client_id',
+    'your_client_secret',
+    'taxpayer_TIN'
+);
 ```
 
 ## Beta Status Notice
