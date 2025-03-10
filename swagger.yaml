@@ -1,7 +1,7 @@
 openapi: 3.0.0
 info:
-  title: MyInvois API
-  description: Malaysia's tax document submission API for electronic invoices
+  title: MyInvois PHP Client Library
+  description: PHP client library for interacting with Malaysia's MyInvois API for tax document submissions.
   version: 1.0.0
   contact:
     email: support@myinvois.hasil.gov.my
