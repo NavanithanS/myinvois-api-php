@@ -85,13 +85,12 @@ class AuthenticationClient implements AuthenticationClientInterface
         }
     }
 
-    public function authenticate(): array
+    public function authenticate(string $tin)
     {
         try {
             $this->logDebug('Starting authentication process');
-
             // Check cache first
-            if ($this->shouldUseCache()) {
+            if ($this->shouldUseCache() && empty($tin)) {
                 $cached = $this->getTokenFromCache();
                 if ($cached) {
                     $this->logDebug('Using cached token');
@@ -100,7 +99,7 @@ class AuthenticationClient implements AuthenticationClientInterface
                 }
             }
 
-            $response = $this->executeAuthRequest();
+            $response = $this->executeAuthRequest($tin);
             $data = $this->parseResponse($response);
             $this->validateAuthResponse($data);
 
@@ -123,8 +122,9 @@ class AuthenticationClient implements AuthenticationClientInterface
         }
     }
 
-    protected function executeAuthRequest()
+    protected function executeAuthRequest($tin)
     {
+        error_log('here' . $tin);
         try {
             // Log request details
             $requestData = [
@@ -132,6 +132,7 @@ class AuthenticationClient implements AuthenticationClientInterface
                 'headers' => [
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/x-www-form-urlencoded',
+                    'onbehalfof' => $tin,
                 ],
                 'form_params' => [
                     'grant_type' => 'client_credentials',
@@ -148,6 +149,7 @@ class AuthenticationClient implements AuthenticationClientInterface
                 'headers' => [
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/x-www-form-urlencoded',
+                    'onbehalfof' => $tin,
                 ],
                 'form_params' => [
                     'grant_type' => 'client_credentials',
@@ -158,8 +160,7 @@ class AuthenticationClient implements AuthenticationClientInterface
                 'connect_timeout' => $this->config['http']['connect_timeout'],
                 'timeout' => $this->config['http']['timeout'],
                 'http_errors' => true,
-                'debug' => true,
-                'verify' => true,
+                'verify' => config('myinvois.sslcert_path'),
             ]);
 
             $this->logDebug('Auth request successful', [
@@ -181,7 +182,6 @@ class AuthenticationClient implements AuthenticationClientInterface
                 $context['response_body'] = (string) $response->getBody();
                 $context['response_headers'] = $response->getHeaders();
             }
-
             $this->logError('Auth request failed', $context);
             throw $e;
         }
@@ -332,15 +332,15 @@ class AuthenticationClient implements AuthenticationClientInterface
         return false;
     }
 
-    public function getAccessToken(): string
-    {
-        if (!$this->hasValidToken()) {
-            $data = $this->authenticate();
-            $this->updateCurrentToken($data);
-        }
+    // public function getAccessToken(): string
+    // {
+    //     if (!$this->hasValidToken()) {
+    //         $data = $this->authenticate();
+    //         $this->updateCurrentToken($data);
+    //     }
 
-        return $this->currentToken;
-    }
+    //     return $this->currentToken;
+    // }
 
     protected function getTokenUrl(): string
     {

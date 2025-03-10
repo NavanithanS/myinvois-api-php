@@ -30,7 +30,7 @@ interface AuthenticationClientInterface
      * @throws ValidationException If the request or response validation fails
      * @throws NetworkException If a network error occurs
      */
-    public function authenticate(): array;
+    public function authenticate(string $tin);
 
     /**
      * Check if the current token is valid and not near expiration.
@@ -54,5 +54,5 @@ interface AuthenticationClientInterface
      * @throws ValidationException If token validation fails
      * @throws NetworkException If a network error occurs during token refresh
      */
-    public function getAccessToken(): string;
+    // public function getAccessToken(): string;
 }

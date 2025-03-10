@@ -66,6 +66,11 @@ class ApiClient
     public function requestAsync(string $method, string $endpoint, array $options = []): PromiseInterface
     {
         try {
+            $authResponse = json_decode($options['authResponse'], true);
+
+            $this->accessToken = $authResponse['access_token'] ?? null;
+            // $this->tokenExpires = $authResponse['expires_in'] ?? null;
+
             $this->authenticateIfNeeded();
 
             $options['headers'] = array_merge(
@@ -111,12 +116,12 @@ class ApiClient
      */
     private function authenticateIfNeeded(): void
     {
-        $tokenNeedsRefresh = !$this->accessToken ||
-            (($this->tokenExpires ?? 0) - time()) <= ($this->config['auth']['token_refresh_buffer'] ?? 300);
+        $tokenNeedsRefresh = !$this->accessToken;
 
         if ($tokenNeedsRefresh) {
             try {
-                $authResponse = $this->authClient->authenticate();
+                error_log('no');
+                $authResponse = $this->authClient->authenticate('');
                 $this->accessToken = $authResponse['access_token'];
                 $this->tokenExpires = time() + ($authResponse['expires_in'] ?? 3600);
             } catch (\Throwable $e) {
@@ -194,7 +199,6 @@ class ApiClient
                 'exception' => get_class($e),
                 'trace' => $e->getTraceAsString()
             ]);
-            error_log($e->getMessage());
             throw new ApiException('Unexpected error occurred', 500, $e);
         }
 
@@ -222,11 +226,15 @@ class ApiClient
 
         switch ($statusCode) {
             case 400:
-                $errorMessage = is_array($body['error'] ?? null)
-                    ? json_encode($body['error'])  // Convert array to JSON string
-                    : ($body['error'] ?? 'Invalid input parameters');
+                if (is_string($body)) {
+                    $body = json_decode($body, true);
+                }
 
-                return ['status' => 400, 'message' => $errorMessage];
+                $errorMessage = $body['error']['details'][0]['message'] ?? '';
+                return [
+                    'status' => 400,
+                    'message' => $errorMessage
+                ];
 
                 // throw new ApiException(
                 //     'Bad Request: ' . $errorMessage,
@@ -272,7 +280,7 @@ class ApiClient
                     : $response->getReasonPhrase();
                 // throw new ApiException($message, $statusCode, $e);
                 return ['status' => $statusCode, 'message' => $message];
-            }
+        }
     }
 
     /**
