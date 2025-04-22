@@ -120,8 +120,8 @@ class ApiClient
 
         if ($tokenNeedsRefresh) {
             try {
-                error_log('no');
-                $authResponse = $this->authClient->authenticate('');
+                $tin = config('myinvois.tin');
+                $authResponse = $this->authClient->authenticate($tin);
                 $this->accessToken = $authResponse['access_token'];
                 $this->tokenExpires = time() + ($authResponse['expires_in'] ?? 3600);
             } catch (\Throwable $e) {
