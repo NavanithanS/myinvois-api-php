@@ -88,6 +88,7 @@ class AuthenticationClient implements AuthenticationClientInterface
     public function authenticate(string $tin)
     {
         try {
+            $tin = config('myinvois.tin');
             $this->logDebug('Starting authentication process');
             // Check cache first
             if ($this->shouldUseCache() && empty($tin)) {
@@ -124,7 +125,6 @@ class AuthenticationClient implements AuthenticationClientInterface
 
     protected function executeAuthRequest($tin)
     {
-        error_log('here' . $tin);
         try {
             // Log request details
             $requestData = [

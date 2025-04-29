@@ -66,11 +66,10 @@ class ApiClient
     public function requestAsync(string $method, string $endpoint, array $options = []): PromiseInterface
     {
         try {
-            $authResponse = json_decode($options['authResponse'], true);
+            // $authResponse = json_decode($options['authResponse'], true) ?? null;
 
-            $this->accessToken = $authResponse['access_token'] ?? null;
+            // $this->accessToken = $authResponse['access_token'] ?? null;
             // $this->tokenExpires = $authResponse['expires_in'] ?? null;
-
             $this->authenticateIfNeeded();
 
             $options['headers'] = array_merge(
@@ -116,22 +115,23 @@ class ApiClient
      */
     private function authenticateIfNeeded(): void
     {
-        $tokenNeedsRefresh = !$this->accessToken;
 
-        if ($tokenNeedsRefresh) {
-            try {
-                $tin = config('myinvois.tin');
-                $authResponse = $this->authClient->authenticate($tin);
-                $this->accessToken = $authResponse['access_token'];
-                $this->tokenExpires = time() + ($authResponse['expires_in'] ?? 3600);
-            } catch (\Throwable $e) {
-                throw new AuthenticationException(
-                    'Failed to authenticate with API: ' . $e->getMessage(),
-                    0,
-                    $e
-                );
-            }
+        // $tokenNeedsRefresh = !$this->accessToken;
+
+        // if ($tokenNeedsRefresh) {
+        try {
+            $tin = config('myinvois.tin');
+            $authResponse = $this->authClient->authenticate($tin);
+            $this->accessToken = $authResponse['access_token'];
+            $this->tokenExpires = time() + ($authResponse['expires_in'] ?? 3600);
+        } catch (\Throwable $e) {
+            throw new AuthenticationException(
+                'Failed to authenticate with API: ' . $e->getMessage(),
+                0,
+                $e
+            );
         }
+        // }
     }
 
     /**
