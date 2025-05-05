@@ -88,7 +88,9 @@ class AuthenticationClient implements AuthenticationClientInterface
     public function authenticate(string $tin)
     {
         try {
-            $tin = config('myinvois.tin');
+            if ($tin === null) {
+                $tin = config('myinvois.tin');
+            }
             $this->logDebug('Starting authentication process');
             // Check cache first
             if ($this->shouldUseCache() && empty($tin)) {

@@ -227,14 +227,33 @@ class MyInvoisClient
 
         $this->utcTime = Carbon::now('UTC')->toTimeString() . "Z";
         $authResponse = $this->authClient->authenticate($this->supplierTIN);
-        $certificateCer = file_get_contents(config('myinvois.signedsignature_path')); // Load certificate
 
-        $certificate = openssl_x509_read($certificateCer);
-        if (!$certificate) {
-            die("Failed to load certificate");
+         $certs = [];
+        $passphrase = "BioEMyInvois";
+        $privateKeyPem = config('myinvois.privatekey_path');
+        $privateKey = file_get_contents($privateKeyPem);
+                // dd($privateKey);
+                if (!$privateKey) {
+                    die("Failed to read private key file.");
+                }
+
+        // $privateKeyResource = openssl_p"key_get_private($privateKey);
+        // if (!$privateKeyResource) {
+        //     die("Failed to load private key: " . openssl_error_string());
+        // }
+        if (!openssl_pkcs12_read($privateKey, $certs, $passphrase)){
+            dd(openssl_error_string());
         }
 
-        $certInfo = openssl_x509_parse($certificate);
+        // $certificateCer = file_get_contents(config('myinvois.signedsignature_path')); // Load certificate
+
+        // $certificate = openssl_x509_read($certificateCer);
+        // if (!$certificate) {
+        //     die("Failed to load certificate");
+        // }
+
+        $certInfo = openssl_x509_parse($certs['cert']);
+        // dd($certInfo);
         // echo "X509 Serial Number: " . $certInfo['serialNumber'] . "\n";
         $this->certSN = $certInfo['serialNumber'];
 
@@ -245,7 +264,7 @@ class MyInvoisClient
         $issuerName = "CN={$certCN}, O={$certO}, C={$certC}";
 
         // Get the certificate in DER format
-        openssl_x509_export($certificate, $pem);
+        openssl_x509_export($certs['cert'], $pem);
         // Convert to DER by stripping headers/footers and decoding base64
         $der = base64_decode(str_replace([
             "-----BEGIN CERTIFICATE-----",
@@ -466,19 +485,13 @@ class MyInvoisClient
         ];
 
         // 5. Minify and Sign SignedInfo
-        $privateKeyPem = config('myinvois.privatekey_path');
-        $privateKey = file_get_contents($privateKeyPem);
-        if (!$privateKey) {
-            die("Failed to read private key file.");
-        }
-        $passphrase = "";
-        $privateKeyResource = openssl_pkey_get_private($privateKey, $passphrase);
-        if (!$privateKeyResource) {
-            die("Failed to load private key: " . openssl_error_string());
-        }
-        openssl_sign($docDigest, $signature, $privateKey, OPENSSL_ALGO_SHA256);
+        
+       
+        // $publicKeyResource = openssl_pkey_get_public($certificateCer);
+        openssl_sign($docJson, $signature, $certs['pkey'], OPENSSL_ALGO_SHA256);
+        $verified = openssl_verify($docDigest, $signature, $certs['cert'], OPENSSL_ALGO_SHA256);
         $this->certValue = base64_encode($signature);
-        dd($this->certValue);
+        // dd($verified);
         $this->signature = [
             "UBLExtensions" => [
                 [
@@ -656,7 +669,7 @@ class MyInvoisClient
         $response = $this->apiClient->request('GET', "/api/v1.0/documents/{$uuid}/raw");
 
         // Return only the longId
-        return $response['longId'] ?? null; // Return null if longId is not found
+        return $response['longID'] ?? null; // Return null if longId is not found
     }
 
     public function generateQrCode($uuid)
