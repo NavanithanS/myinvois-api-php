@@ -167,13 +167,13 @@ class MyInvoisClient
             $httpClient,
             Cache::store(),
             $this->authClient,
+            $tin ?? '',
             [
                 'logging' => [
                     'enabled' => true,
                     'channel' => 'myinvois',
                 ],
-            ],
-            $tin
+            ]
         );
 
         $this->stateMapping = [
@@ -229,20 +229,20 @@ class MyInvoisClient
         $this->utcTime = Carbon::now('UTC')->toTimeString() . "Z";
         $authResponse = $this->authClient->authenticate($this->supplierTIN);
 
-         $certs = [];
+        $certs = [];
         $passphrase = "BioEMyInvois";
         $privateKeyPem = config('myinvois.privatekey_path');
         $privateKey = file_get_contents($privateKeyPem);
-                // dd($privateKey);
-                if (!$privateKey) {
-                    die("Failed to read private key file.");
-                }
+        // dd($privateKey);
+        if (!$privateKey) {
+            die("Failed to read private key file.");
+        }
 
         // $privateKeyResource = openssl_p"key_get_private($privateKey);
         // if (!$privateKeyResource) {
         //     die("Failed to load private key: " . openssl_error_string());
         // }
-        if (!openssl_pkcs12_read($privateKey, $certs, $passphrase)){
+        if (!openssl_pkcs12_read($privateKey, $certs, $passphrase)) {
             dd(openssl_error_string());
         }
 
@@ -486,8 +486,8 @@ class MyInvoisClient
         ];
 
         // 5. Minify and Sign SignedInfo
-        
-       
+
+
         // $publicKeyResource = openssl_pkey_get_public($certificateCer);
         openssl_sign($docJson, $signature, $certs['pkey'], OPENSSL_ALGO_SHA256);
         $verified = openssl_verify($docDigest, $signature, $certs['cert'], OPENSSL_ALGO_SHA256);
@@ -675,10 +675,9 @@ class MyInvoisClient
 
     public function generateQrCode($uuid)
     {
-        $baseUrl = config('myinvois.base_url');
         $longid = $this->getDocument($uuid);
 
-        $url = "{$baseUrl}/{$uuid}/share/{$longid}";
+        $url = self::PRODUCTION_URL . "/{$uuid}/share/{$longid}";
         // $url = 'https://www.google.com';
 
         // Create QR Code

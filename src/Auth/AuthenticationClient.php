@@ -132,7 +132,7 @@ class AuthenticationClient implements AuthenticationClientInterface
             ];
 
             // Only include 'onbehalfof' header if $tin is explicitly passed
-            if (!is_null($tin)) {
+            if (!empty($tin)) {
                 $headers['onbehalfof'] = $tin;
             }
             else {
