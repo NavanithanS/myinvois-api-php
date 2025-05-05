@@ -586,7 +586,7 @@ class MyInvoisClient
                 [
                     "format" => "JSON",
                     "documentHash" => $documentHash,
-                    "codeNumber" => "INV00000002",
+                    "codeNumber" => $this->invoiceNo,
                     "document" => $base64Encoded
                 ]
             ]
