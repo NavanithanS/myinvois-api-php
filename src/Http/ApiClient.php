@@ -25,6 +25,7 @@ class ApiClient
     private $cache;
     private $authClient;
     private $baseUrl;
+    private $tin;
 
     public function __construct(
         $clientId,
@@ -33,12 +34,14 @@ class ApiClient
         GuzzleClient $httpClient,
         CacheRepository $cache,
         AuthenticationClient $authClient,
+        $tin,
         $config = []
     ) {
         $this->httpClient = $httpClient;
         $this->cache = $cache;
         $this->authClient = $authClient;
         $this->baseUrl = $baseUrl;
+        $this->tin = $tin;
     }
 
     /**
@@ -120,8 +123,7 @@ class ApiClient
 
         // if ($tokenNeedsRefresh) {
         try {
-            $tin = config('myinvois.tin');
-            $authResponse = $this->authClient->authenticate($tin);
+            $authResponse = $this->authClient->authenticate($this->tin);
             $this->accessToken = $authResponse['access_token'];
             $this->tokenExpires = time() + ($authResponse['expires_in'] ?? 3600);
         } catch (\Throwable $e) {

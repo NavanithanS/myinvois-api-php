@@ -119,7 +119,7 @@ class MyInvoisClient
 
     public const IDENTITY_SANDBOX_URL = 'https://preprod-api.myinvois.hasil.gov.my/connect/token';
 
-    public function __construct()
+    public function __construct($tin)
     {
         Assert::notEmpty(config('myinvois.client_id'), 'Myinvois client ID cannot be empty');
         Assert::notEmpty(config('myinvois.client_secret'), 'Myinvois client secret cannot be empty');
@@ -172,7 +172,8 @@ class MyInvoisClient
                     'enabled' => true,
                     'channel' => 'myinvois',
                 ],
-            ]
+            ],
+            $tin
         );
 
         $this->stateMapping = [
