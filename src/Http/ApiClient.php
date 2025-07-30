@@ -25,7 +25,6 @@ class ApiClient
     private $cache;
     private $authClient;
     private $baseUrl;
-    private $tin;
 
     public function __construct(
         $clientId,
@@ -34,14 +33,12 @@ class ApiClient
         GuzzleClient $httpClient,
         CacheRepository $cache,
         AuthenticationClient $authClient,
-        $tin,
         $config = []
     ) {
         $this->httpClient = $httpClient;
         $this->cache = $cache;
         $this->authClient = $authClient;
         $this->baseUrl = $baseUrl;
-        $this->tin = $tin;
     }
 
     /**
@@ -69,10 +66,11 @@ class ApiClient
     public function requestAsync(string $method, string $endpoint, array $options = []): PromiseInterface
     {
         try {
-            // $authResponse = json_decode($options['authResponse'], true) ?? null;
+            $authResponse = json_decode($options['authResponse'], true);
 
-            // $this->accessToken = $authResponse['access_token'] ?? null;
+            $this->accessToken = $authResponse['access_token'] ?? null;
             // $this->tokenExpires = $authResponse['expires_in'] ?? null;
+
             $this->authenticateIfNeeded();
 
             $options['headers'] = array_merge(
@@ -118,22 +116,21 @@ class ApiClient
      */
     private function authenticateIfNeeded(): void
     {
+        $tokenNeedsRefresh = !$this->accessToken;
 
-        // $tokenNeedsRefresh = !$this->accessToken;
-
-        // if ($tokenNeedsRefresh) {
-        try {
-            $authResponse = $this->authClient->authenticate($this->tin);
-            $this->accessToken = $authResponse['access_token'];
-            $this->tokenExpires = time() + ($authResponse['expires_in'] ?? 3600);
-        } catch (\Throwable $e) {
-            throw new AuthenticationException(
-                'Failed to authenticate with API: ' . $e->getMessage(),
-                0,
-                $e
-            );
+        if ($tokenNeedsRefresh) {
+            try {
+                $authResponse = $this->authClient->authenticate('');
+                $this->accessToken = $authResponse['access_token'];
+                $this->tokenExpires = time() + ($authResponse['expires_in'] ?? 3600);
+            } catch (\Throwable $e) {
+                throw new AuthenticationException(
+                    'Failed to authenticate with API: ' . $e->getMessage(),
+                    0,
+                    $e
+                );
+            }
         }
-        // }
     }
 
     /**
