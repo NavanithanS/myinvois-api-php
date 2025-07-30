@@ -125,31 +125,23 @@ class AuthenticationClient implements AuthenticationClientInterface
     protected function executeAuthRequest($tin)
     {
         try {
-            // Log request details
-            $requestData = [
-                'endpoint' => $this->getTokenUrl(),
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/x-www-form-urlencoded',
-                    'onbehalfof' => $tin,
-                ],
-                'form_params' => [
-                    'grant_type' => 'client_credentials',
-                    'client_id' => substr($this->clientId, 0, 5) . '...',
-                    'scope' => self::DEFAULT_SCOPE,
-                ],
-                'connect_timeout' => $this->config['http']['connect_timeout'],
-                'timeout' => $this->config['http']['timeout'],
+            // Build headers
+            $headers = [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/x-www-form-urlencoded',
             ];
 
-            $this->logDebug('Executing auth request', $requestData);
+            // Only include 'onbehalfof' header if $tin is explicitly passed
+            if (!empty($tin)) {
+                $headers['onbehalfof'] = $tin;
+            }
+            else {
+                $tin = config('myinvois.tin');
+            }
 
+            // Perform the request
             $response = $this->httpClient->post($this->getTokenUrl(), [
-                'headers' => [
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/x-www-form-urlencoded',
-                    'onbehalfof' => $tin,
-                ],
+                'headers' => $headers,
                 'form_params' => [
                     'grant_type' => 'client_credentials',
                     'client_id' => $this->clientId,
@@ -162,6 +154,7 @@ class AuthenticationClient implements AuthenticationClientInterface
                 'verify' => config('myinvois.sslcert_path'),
             ]);
 
+            // Log success
             $this->logDebug('Auth request successful', [
                 'status_code' => $response->getStatusCode(),
                 'headers' => $response->getHeaders(),
