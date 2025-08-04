@@ -304,7 +304,7 @@ class MyInvoisClient
                         [
                             "Party" => [
                                 [
-                                    "IndustryClassificationCode" => [["_" => "46510", "name" => "Wholesale of computer hardware, software and peripherals"]],
+                                    "IndustryClassificationCode" => [["_" => "68109", "name" => "Real estate activities with own or leased property n.e.c."]],
                                     "PartyIdentification" => [
                                         ["ID" => [["_" => $this->supplierTIN, "schemeID" => "TIN"]]],
                                         ["ID" => [["_" => $this->supplierIC, "schemeID" => $this->supplierIdType]]],
@@ -407,8 +407,8 @@ class MyInvoisClient
                             ],
                             "Item" => [
                                 [
-                                    "CommodityClassification" => [["ItemClassificationCode" => [["_" => "003", "listID" => "CLASS"]]]],
-                                    "Description" => [["_" => "Laptop Peripherals"]]
+                                    "CommodityClassification" => [["ItemClassificationCode" => [["_" => "022", "listID" => "CLASS"]]]],
+                                    "Description" => [["_" => "Others"]]
                                 ]
                             ],
                             "Price" => [
