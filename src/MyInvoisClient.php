@@ -60,6 +60,7 @@ class MyInvoisClient
     private $dateTo;
     private $supplierTIN = '';
     private $supplierIC;
+    private $supplierSST;
     private $supplierName;
     private $supplierPhone;
     private $supplierEmail;
@@ -217,6 +218,7 @@ class MyInvoisClient
         $this->supplierIdType = $request->input('supplierIdType');
         $this->supplierTIN = $request->input('supplierTIN');
         $this->supplierIC = $request->input('supplierIC');
+        $this->supplierSST = $request->input('supplierSST');
         $this->supplierName = $request->input('supplierName');
         $this->supplierPhone = $request->input('supplierPhone');
         $this->supplierEmail = $request->input('supplierEmail');
@@ -293,13 +295,13 @@ class MyInvoisClient
                     "InvoiceTypeCode" => [["_" => "01", "listVersionID" => "1.1"]],
                     "DocumentCurrencyCode" => [["_" => "MYR"]],
                     "TaxCurrencyCode" => [["_" => "MYR"]],
-                    "InvoicePeriod" => [
-                        [
-                            "StartDate" => [["_" => $this->dateFrom]],
-                            "EndDate" => [["_" => $this->dateTo]],
-                            "Description" => [["_" => "Monthly"]]
-                        ]
-                    ],
+                    // "InvoicePeriod" => [
+                    //     [
+                    //         "StartDate" => [["_" => $this->dateFrom]],
+                    //         "EndDate" => [["_" => $this->dateTo]],
+                    //         "Description" => [["_" => "Monthly"]]
+                    //     ]
+                    // ],
                     "AccountingSupplierParty" => [
                         [
                             "Party" => [
@@ -308,7 +310,7 @@ class MyInvoisClient
                                     "PartyIdentification" => [
                                         ["ID" => [["_" => $this->supplierTIN, "schemeID" => "TIN"]]],
                                         ["ID" => [["_" => $this->supplierIC, "schemeID" => $this->supplierIdType]]],
-                                        ["ID" => [["_" => "NA", "schemeID" => "SST"]]],
+                                        ["ID" => [["_" => $this->supplierSST, "schemeID" => "SST"]]],
                                         ["ID" => [["_" => "NA", "schemeID" => "TTX"]]]
                                     ],
                                     "PostalAddress" => [
@@ -389,6 +391,7 @@ class MyInvoisClient
                     "InvoiceLine" => [
                         [
                             "ID" => [["_" => $this->invoiceNo]],
+                            "InvoicedQuantity" => [["_" => 1]],
                             "LineExtensionAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]],
                             "TaxTotal" => [
                                 [
@@ -408,7 +411,7 @@ class MyInvoisClient
                             "Item" => [
                                 [
                                     "CommodityClassification" => [["ItemClassificationCode" => [["_" => "022", "listID" => "CLASS"]]]],
-                                    "Description" => [["_" => "Others"]]
+                                    "Description" => [["_" => "Electricity Charge"]]
                                 ]
                             ],
                             "Price" => [
