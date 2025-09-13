@@ -25,7 +25,7 @@ class DocumentTypesApiTest extends TestCase
                 'result' => [
                     [
                         'id' => 45,
-                        'invoiceTypeCode' => DocumentTypeEnum::INVOICE->value,
+                        'invoiceTypeCode' => DocumentTypeEnum::INVOICE,
                         'description' => 'Invoice',
                         'activeFrom' => '2015-02-13T13:15:00Z',
                         'activeTo' => null,
@@ -71,7 +71,7 @@ class DocumentTypesApiTest extends TestCase
         $this->assertCount(1, $types);
         $this->assertInstanceOf(DocumentType::class, $types[0]);
         $this->assertEquals(45, $types[0]->id);
-        $this->assertEquals(DocumentTypeEnum::INVOICE->value, $types[0]->invoiceTypeCode);
+        $this->assertEquals(DocumentTypeEnum::INVOICE, $types[0]->invoiceTypeCode);
         $this->assertTrue($types[0]->isActive());
 
         // Verify document type version
@@ -114,7 +114,7 @@ class DocumentTypesApiTest extends TestCase
             new Response(200, [], json_encode([
                 'result' => [
                     'id' => 45,
-                    'invoiceTypeCode' => DocumentTypeEnum::INVOICE->value,
+                    'invoiceTypeCode' => DocumentTypeEnum::INVOICE,
                     'description' => 'Invoice',
                     'activeFrom' => '2015-02-13T13:15:00Z',
                     'activeTo' => null,
