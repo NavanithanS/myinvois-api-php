@@ -31,11 +31,18 @@ trait TaxpayerApi
      * @throws ValidationException If the input parameters are invalid
      * @throws ApiException If the API request fails
      */
-    private $CACHE_PREFIX = 'myinvois_tin_validation_';
+    private const TOKEN_CACHE_PREFIX = 'myinvois_tin_validation_';
 
-    private $CACHE_TTL = 86400; // 24 hours
+    private const CACHE_TTL = 86400; // 24 hours
 
-    private $VALID_ID_TYPES = ['NRIC', 'PASSPORT', 'BRN', 'ARMY'];
+    private const VALID_ID_TYPES = ['NRIC', 'PASSPORT', 'BRN', 'ARMY'];
+
+    private const ID_PATTERNS = [
+        'NRIC' => '/^\d{12}$/',
+        'PASSPORT' => '/^[A-Z]\d{8}$/',
+        'BRN' => '/^\d{12}$/',
+        'ARMY' => '/^\d{12}$/',
+    ];
 
     /**
      * Validate a taxpayer's TIN with additional identification.
@@ -79,10 +86,13 @@ trait TaxpayerApi
                 }
             }
 
-            $this->logDebug('Validating taxpayer TIN', [
-                'tin' => $tin,
-                'id_type' => $idType,
-            ], 'TaxpayerApi');
+            if ($this->logger && ($this->config['logging']['enabled'] ?? false)) {
+                $this->logger->info('MyInvois TaxpayerApi: Validating taxpayer TIN', [
+                    'tin' => $tin,
+                    'id_type' => $idType,
+                    'client_id' => $this->clientId ?? null,
+                ]);
+            }
 
             $response = $this->apiClient->request(
                 'GET',
@@ -98,9 +108,12 @@ trait TaxpayerApi
             // Store successful result in cache
             if ($useCache && isset($this->cache)) {
                 $cacheKey = $this->getCacheKey($tin, $idType, $idValue);
-                $this->cache->put($cacheKey, true, self::$CACHE_TTL);
+                $this->cache->put($cacheKey, true, self::CACHE_TTL);
             }
-
+            $this->logDebug('tin validation successful', [
+                'tin' => $tin,
+                'id_type' => strtoupper($idType),
+            ], 'TaxpayerApi');
             return true;
 
         } catch (ApiException $e) {
@@ -130,15 +143,8 @@ trait TaxpayerApi
      */
     private function validateTinFormat(string $tin): void
     {
-        Assert::notEmpty($tin, 'TIN cannot be empty');
-        Assert::length($tin, 11, 'TIN must be exactly 11 characters');
-
-        if (! preg_match('/^C\d{10}$/', $tin)) {
-            throw new ValidationException(
-                'Invalid TIN format',
-                ['tin' => ['TIN must start with C followed by exactly 10 digits']],
-                422
-            );
+        if ($tin === '' || $tin === null || strlen($tin) !== 11 || ! preg_match('/^C\d{10}$/', $tin)) {
+            throw new ValidationException('Invalid TIN format', ['tin' => ['TIN must start with C followed by exactly 10 digits']], 422);
         }
     }
 
@@ -149,14 +155,16 @@ trait TaxpayerApi
      */
     private function validateIdType(string $idType): void
     {
-        Assert::notEmpty($idType, 'ID type cannot be empty');
+        if ($idType === '' || $idType === null) {
+            throw new ValidationException('ID type cannot be empty');
+        }
 
         $normalizedType = strtoupper(trim($idType));
 
-        if (! in_array($normalizedType, self::$VALID_ID_TYPES, true)) {
+        if (! in_array($normalizedType, self::VALID_ID_TYPES, true)) {
             throw new ValidationException(
                 'Invalid ID type',
-                ['idType' => ['ID type must be one of: '.implode(', ', self::$VALID_ID_TYPES)]],
+                ['idType' => ['ID type must be one of: '.implode(', ', self::VALID_ID_TYPES)]],
                 422
             );
         }
@@ -169,10 +177,12 @@ trait TaxpayerApi
      */
     private function validateIdValue(string $idType, string $idValue): void
     {
-        Assert::notEmpty($idValue, 'ID value cannot be empty');
+        if ($idValue === '' || $idValue === null) {
+            throw new ValidationException('ID value cannot be empty');
+        }
 
         $normalizedType = strtoupper($idType);
-        $pattern = self::$ID_PATTERNS[$normalizedType] ?? null;
+        $pattern = self::ID_PATTERNS[$normalizedType] ?? null;
 
         if (! $pattern || ! preg_match($pattern, $idValue)) {
             $errorMessages = [
@@ -182,11 +192,10 @@ trait TaxpayerApi
                 'ARMY' => 'Army number must be 12 digits',
             ];
 
-            throw new ValidationException(
-                sprintf('Invalid %s format', $normalizedType),
-                ['idValue' => [$errorMessages[$normalizedType] ?? 'Invalid format']],
-                422
-            );
+            $message = $normalizedType === 'PASSPORT'
+                ? 'Invalid passport number format'
+                : ($normalizedType === 'ARMY' ? 'Invalid army number format' : sprintf('Invalid %s format', $normalizedType));
+            throw new ValidationException($message, ['idValue' => [$errorMessages[$normalizedType] ?? 'Invalid format']], 422);
         }
 
         // Additional validation for specific types
@@ -227,7 +236,7 @@ trait TaxpayerApi
      *
      * @throws ApiException if rate limit is exceeded
      */
-    private function checkRateLimit(): void
+    private function enforceTinRateLimit(): void
     {
         if (! $this->cache) {
             return;
@@ -257,7 +266,7 @@ trait TaxpayerApi
      */
     public static function getValidIdTypes(): array
     {
-        return self::$VALID_ID_TYPES;
+        return self::VALID_ID_TYPES;
     }
 
     /**
@@ -268,6 +277,6 @@ trait TaxpayerApi
      */
     public static function getValidationPattern(string $idType): ?string
     {
-        return self::$ID_PATTERNS[strtoupper($idType)] ?? null;
-    }
+        return self::ID_PATTERNS[strtoupper($idType)] ?? null;
+}
 }

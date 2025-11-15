@@ -124,13 +124,12 @@ trait DocumentDetailsApi
     {
         $this->validateUuid($uuid);
 
-        if (empty($longId)) {
-            throw new ValidationException('Long ID cannot be empty');
+        // Validate long ID format (at least 40 uppercase alphanumeric characters, allow spaces)
+        if (! is_string($longId) || ! preg_match('/^[A-Z0-9\s]{40,}$/', $longId)) {
+            throw new ValidationException('Invalid long ID format');
         }
 
-        Assert::regex($longId, '/^[A-Z0-9\s]{32,}$/', 'Invalid long ID format');
-
-        $baseUrl = rtrim($this->config['base_url'] ?? '', '/');
+        $baseUrl = rtrim($this->config['base_url'] ?? (string) config('myinvois.base_url', \Nava\MyInvois\MyInvoisClient::PRODUCTION_URL), '/');
 
         return "{$baseUrl}/{$uuid}/share/{$longId}";
     }

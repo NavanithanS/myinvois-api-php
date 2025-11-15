@@ -86,8 +86,11 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
     /**
      * {@inheritdoc}
      */
-    public function authenticate(): array
+    public function authenticate(string $tin): array
     {
+        if (!empty($tin) && $tin !== $this->onBehalfOf) {
+            $this->onBehalfOf($tin);
+        }
         if (!$this->onBehalfOf) {
             $this->logError('Authentication attempted without setting taxpayer TIN');
             throw new ValidationException(
@@ -97,10 +100,32 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
         }
 
         try {
-            return parent::authenticate();
+            // Forward the TIN to parent for header inclusion
+            return parent::authenticate($this->onBehalfOf);
         } catch (GuzzleException $e) {
             throw $this->handleIntermediaryAuthError($e);
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getAccessToken(): string
+    {
+        if (!$this->onBehalfOf) {
+            throw new ValidationException(
+                'Taxpayer TIN must be set using onBehalfOf() before getting access token',
+                ['tin' => ['TIN is required']]
+            );
+        }
+
+        $data = $this->authenticate($this->onBehalfOf);
+
+        if (!isset($data['access_token'])) {
+            throw new AuthenticationException('Authentication response missing access_token');
+        }
+
+        return $data['access_token'];
     }
 
     /**

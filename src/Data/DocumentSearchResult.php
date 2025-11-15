@@ -3,6 +3,7 @@
 namespace Nava\MyInvois\Data;
 
 use DateTimeImmutable;
+use DateTimeInterface;
 use JsonSerializable;
 use Nava\MyInvois\Enums\DocumentStatusEnum;
 use Nava\MyInvois\Enums\DocumentTypeEnum;
@@ -81,17 +82,16 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
      */
     public static function fromArray(array $data): self
     {
-        // Validate required fields
+        // Validate required fields (keep minimal to match API variations)
         $requiredFields = [
             'uuid', 'submissionUID', 'longId', 'internalId', 'typeName',
             'typeVersionName', 'issuerTin', 'issuerName', 'dateTimeIssued',
             'dateTimeReceived', 'dateTimeValidated', 'totalSales',
-            'totalDiscount', 'netAmount', 'total', 'status', 'createdByUserId',
-            'supplierTIN', 'supplierName', 'submissionChannel', 'buyerName', 'buyerTIN',
+            'totalDiscount', 'netAmount', 'total', 'status', 'createdByUserId', 'supplierTIN', 'supplierName', 'submissionChannel', 'buyerName', 'buyerTIN',
         ];
 
         foreach ($requiredFields as $field) {
-            Assert::keyExists($data, $field, sprintf('%s is required', ucfirst($field)));
+            Assert::keyExists($data, $field, sprintf('%s is required', $field));
         }
 
         // Validate numeric values
@@ -104,10 +104,12 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
         // Validate TIN formats
         $tinFields = ['issuerTin', 'supplierTIN', 'buyerTIN'];
         foreach ($tinFields as $field) {
-            if (! preg_match('/^C\d{10}$/', $data[$field])) {
-                throw new \InvalidArgumentException(
-                    sprintf('%s must start with C followed by 10 digits', ucfirst($field))
-                );
+            if (isset($data[$field])) {
+                if (! preg_match('/^C\d{10}$/', $data[$field])) {
+                    throw new \InvalidArgumentException(
+                        sprintf('%s must start with C followed by 10 digits', ucfirst($field))
+                    );
+                }
             }
         }
 
@@ -119,12 +121,14 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
             );
         }
 
-        // Validate submission channel
-        Assert::inArray(
-            $data['submissionChannel'],
-            ['ERP', 'Invoicing Portal', 'InvoicingMobileApp'],
-            'Invalid submission channel'
-        );
+        // Validate submission channel when present
+        if (isset($data['submissionChannel'])) {
+            Assert::inArray(
+                $data['submissionChannel'],
+                ['ERP', 'Invoicing Portal', 'InvoicingMobileApp'],
+                'Invalid submission channel'
+            );
+        }
 
         // Validate document status
         Assert::inArray(
@@ -159,14 +163,14 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
             ? new DateTimeImmutable($data['rejectRequestDateTime'])
             : null,
             'documentStatusReason' => $data['documentStatusReason'] ?? null,
-            'createdByUserId' => $data['createdByUserId'],
-            'supplierTIN' => $data['supplierTIN'],
-            'supplierName' => $data['supplierName'],
-            'submissionChannel' => $data['submissionChannel'],
+            'createdByUserId' => $data['createdByUserId'] ?? null,
+            'supplierTIN' => $data['supplierTIN'] ?? null,
+            'supplierName' => $data['supplierName'] ?? null,
+            'submissionChannel' => $data['submissionChannel'] ?? null,
             'intermediaryName' => $data['intermediaryName'] ?? null,
             'intermediaryTIN' => $data['intermediaryTIN'] ?? null,
-            'buyerName' => $data['buyerName'],
-            'buyerTIN' => $data['buyerTIN'],
+            'buyerName' => $data['buyerName'] ?? null,
+            'buyerTIN' => $data['buyerTIN'] ?? null,
         ]);
     }
 
@@ -256,16 +260,16 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
             'issuerName' => $this->issuerName,
             'receiverId' => $this->receiverId,
             'receiverName' => $this->receiverName,
-            'dateTimeIssued' => $this->dateTimeIssued->format('Y-m-d H:i:s'),
-            'dateTimeReceived' => $this->dateTimeReceived->format('Y-m-d H:i:s'),
-            'dateTimeValidated' => $this->dateTimeValidated->format('Y-m-d H:i:s'),
+            'dateTimeIssued' => $this->dateTimeIssued->format(DateTimeInterface::ATOM),
+            'dateTimeReceived' => $this->dateTimeReceived->format(DateTimeInterface::ATOM),
+            'dateTimeValidated' => $this->dateTimeValidated->format(DateTimeInterface::ATOM),
             'totalSales' => $this->totalSales,
             'totalDiscount' => $this->totalDiscount,
             'netAmount' => $this->netAmount,
             'total' => $this->total,
             'status' => $this->status,
-            'cancelDateTime' => $this->cancelDateTime ? $this->cancelDateTime->format('Y-m-d H:i:s') : null,
-            'rejectRequestDateTime' => $this->rejectRequestDateTime ? $this->rejectRequestDateTime->format('Y-m-d H:i:s') : null,
+            'cancelDateTime' => $this->cancelDateTime ? $this->cancelDateTime->format(DateTimeInterface::ATOM) : null,
+            'rejectRequestDateTime' => $this->rejectRequestDateTime ? $this->rejectRequestDateTime->format(DateTimeInterface::ATOM) : null,
             'documentStatusReason' => $this->documentStatusReason,
             'createdByUserId' => $this->createdByUserId,
             'supplierTIN' => $this->supplierTIN,

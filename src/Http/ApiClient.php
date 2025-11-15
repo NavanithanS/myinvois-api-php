@@ -19,6 +19,7 @@ use Psr\Http\Message\ResponseInterface;
  */
 class ApiClient
 {
+    private $config = [];
     private $accessToken = null;
     private $tokenExpires = null;
     private $httpClient;
@@ -42,6 +43,7 @@ class ApiClient
         $this->authClient = $authClient;
         $this->baseUrl = $baseUrl;
         $this->tin = $tin;
+        $this->config = $config ?? [];
     }
 
     /**
@@ -56,7 +58,27 @@ class ApiClient
      */
     public function request(string $method, string $endpoint, array $options = []): array
     {
-        return $this->requestAsync($method, $endpoint, $options)->wait();
+        try {
+            $this->authenticateIfNeeded();
+
+            $defaultHeaders = [
+                'Authorization' => "Bearer {$this->accessToken}",
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ];
+            $options['headers'] = array_merge($defaultHeaders, $options['headers'] ?? []);
+
+            $this->logRequest($method, $endpoint, $options);
+
+            $response = $this->httpClient->request($method, $this->baseUrl . $endpoint, $options);
+
+            return $this->handleResponse($response);
+        } catch (RequestException $e) {
+            // Let the common handler map it to domain exceptions
+            return $this->handleRequestException($e);
+        } catch (\Throwable $e) {
+            throw new ApiException('An unexpected error occurred', 0, $e);
+        }
     }
 
     /**
@@ -75,14 +97,13 @@ class ApiClient
             // $this->tokenExpires = $authResponse['expires_in'] ?? null;
             $this->authenticateIfNeeded();
 
-            $options['headers'] = array_merge(
-                $options['headers'] ?? [],
-                [
-                    'Authorization' => "Bearer {$this->accessToken}",
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                ]
-            );
+            // Default headers, allowing explicit caller-provided headers to override
+            $defaultHeaders = [
+                'Authorization' => "Bearer {$this->accessToken}",
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ];
+            $options['headers'] = array_merge($defaultHeaders, $options['headers'] ?? []);
 
             $this->logRequest($method, $endpoint, $options);
 
@@ -107,7 +128,7 @@ class ApiClient
                     }
                 );
         } catch (\Throwable $e) {
-            throw new ApiException('Unexpected error occurred: ' . $e->getMessage(), 0, $e);
+            throw new ApiException('An unexpected error occurred', 0, $e);
         }
     }
 
@@ -118,10 +139,11 @@ class ApiClient
      */
     private function authenticateIfNeeded(): void
     {
-
-        // $tokenNeedsRefresh = !$this->accessToken;
-
-        // if ($tokenNeedsRefresh) {
+        // Only authenticate if no token or token is near expiry
+        $buffer = 60; // seconds
+        if ($this->accessToken && $this->tokenExpires && (time() + $buffer) < $this->tokenExpires) {
+            return;
+        }
         try {
             $authResponse = $this->authClient->authenticate($this->tin);
             $this->accessToken = $authResponse['access_token'];
@@ -133,7 +155,6 @@ class ApiClient
                 $e
             );
         }
-        // }
     }
 
     /**
@@ -201,7 +222,7 @@ class ApiClient
                 'exception' => get_class($e),
                 'trace' => $e->getTraceAsString()
             ]);
-            throw new ApiException('Unexpected error occurred', 500, $e);
+            throw new ApiException('An unexpected error occurred', 500, $e);
         }
 
         $response = $e->getResponse();
@@ -228,15 +249,8 @@ class ApiClient
 
         switch ($statusCode) {
             case 400:
-                if (is_string($body)) {
-                    $body = json_decode($body, true);
-                }
-
-                $errorMessage = $body['error']['details'][0]['message'] ?? '';
-                return [
-                    'status' => 400,
-                    'message' => $errorMessage
-                ];
+                $message = $body['message'] ?? ($body['error']['details'][0]['message'] ?? 'Bad Request');
+                throw new ApiException($message, 400, $e);
 
                 // throw new ApiException(
                 //     'Bad Request: ' . $errorMessage,
@@ -245,7 +259,8 @@ class ApiClient
                 // );
 
             case 404:
-                return ['status' => 404, 'message' => 'No TIN found for the given search parameters.'];
+                $message = $body['message'] ?? 'Not Found';
+                throw new ApiException($message, 404, $e);
 
                 // throw new ApiException(
                 //     'No TIN found for the given search parameters.',
@@ -254,34 +269,20 @@ class ApiClient
                 // );
 
             case 422:
-                // throw new ValidationException(
-                //     $message,
-                //     $body['errors'] ?? [],
-                //     422,
-                //     $e
-                // );
-
-                return ['status' => 422, 'message' => $message];
+                // Surface as ApiException so feature layers can normalize messages
+                throw new ApiException($message, 422, $e);
 
             case 401:
                 $this->accessToken = null;
                 $this->tokenExpires = null;
-                // throw new AuthenticationException($message, 401, $e);
-
-                return ['status' => 401, 'message' => $message];
+                throw new AuthenticationException($message, 401, $e);
 
             case 429:
-                // throw new ApiException('Rate limit exceeded', 429, $e);
-
-                return ['status' => 429, 'message' => 'Rate limit exceeded'];
+                throw new ApiException('Rate limit exceeded', 429, $e);
 
             default:
-                $responseData = json_decode($response->getBody()->getContents(), true);
-                $message = isset($responseData['error'])
-                    ? (is_array($responseData['error']) ? json_encode($responseData['error']) : $responseData['error'])
-                    : $response->getReasonPhrase();
-                // throw new ApiException($message, $statusCode, $e);
-                return ['status' => $statusCode, 'message' => $message];
+                $message = $body['message'] ?? ($body['error'] ?? $response->getReasonPhrase());
+                throw new ApiException($message, $statusCode, $e);
         }
     }
 
@@ -307,7 +308,7 @@ class ApiClient
     /**
      * Retry a failed request.
      */
-    private function retryRequest(string $method, string $endpoint, array $options): PromiseInterface
+    private function retryRequest(string $method, string $endpoint, array $options)
     {
         $retries = $options['_retries'] ?? 0;
         $maxRetries = $this->config['http']['retry']['times'] ?? 3;
@@ -319,11 +320,10 @@ class ApiClient
         $delay = $this->getRetryDelay($retries);
         $options['_retries'] = $retries + 1;
 
-        return new Promise(function () use ($method, $endpoint, $options, $delay) {
-            usleep($delay * 1000); // Convert to microseconds
+        // Perform a simple synchronous backoff to avoid unresolved promises in tests
+        usleep($delay * 1000); // Convert to microseconds
 
-            return $this->requestAsync($method, $endpoint, $options);
-        });
+        return $this->requestAsync($method, $endpoint, $options)->wait();
     }
 
     /**

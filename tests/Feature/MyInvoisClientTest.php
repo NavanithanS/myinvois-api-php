@@ -119,12 +119,21 @@ class MyInvoisClientTest extends TestCase
         // Assert request was made correctly
         $request = $this->getLastRequest();
         $this->assertEquals('POST', $request->getMethod());
-        $this->assertStringContainsString('/documents', $request->getUri()->getPath());
+        $this->assertStringContainsString('/api/v1.0/documentsubmissions', $request->getUri()->getPath());
 
-        // Verify request body
+        // Verify request body (wrapped in documents submission)
         $sentData = json_decode($this->container[1]['request']->getBody(), true);
-        $this->assertEquals('2024-11-12', $sentData['issueDate']);
-        $this->assertEquals('1000.50', $sentData['totalAmount']);
+        $this->assertArrayHasKey('documents', $sentData);
+        $this->assertIsArray($sentData['documents']);
+        $this->assertNotEmpty($sentData['documents']);
+        $doc = $sentData['documents'][0];
+        $this->assertArrayHasKey('document', $doc);
+        $this->assertArrayHasKey('documentHash', $doc);
+        $this->assertArrayHasKey('codeNumber', $doc);
+
+        $decoded = json_decode(base64_decode($doc['document']), true);
+        $this->assertEquals('2024-11-12', $decoded['issueDate']);
+        $this->assertEquals(1000.50, $decoded['totalAmount']);
 
         // Verify response
         $this->assertEquals('DOC123', $response['documentId']);
@@ -237,8 +246,8 @@ class MyInvoisClientTest extends TestCase
         $response = $this->client->cancelDocument('DOC123', 'Wrong information');
 
         $request = $this->getLastRequest();
-        $this->assertEquals('POST', $request->getMethod());
-        $this->assertStringContainsString('/documents/DOC123/cancel', $request->getUri()->getPath());
+        $this->assertEquals('PUT', $request->getMethod());
+        $this->assertStringContainsString('/api/v1.0/documents/state/DOC123/state', $request->getUri()->getPath());
 
         // Verify request body
         $sentData = json_decode($this->container[1]['request']->getBody(), true);

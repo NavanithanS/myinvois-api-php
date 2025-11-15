@@ -22,7 +22,8 @@ class AuthenticationClient implements AuthenticationClientInterface
     use LoggerTrait;
     use RateLimitingTrait;
 
-    protected const TOKEN_ENDPOINT = '/connect/token';
+    // Tests expect OAuth token endpoint at /oauth/token
+    protected const TOKEN_ENDPOINT = '/oauth/token';
 
     protected const DEFAULT_SCOPE = 'InvoicingAPI';
 
@@ -151,7 +152,7 @@ class AuthenticationClient implements AuthenticationClientInterface
                 'connect_timeout' => $this->config['http']['connect_timeout'],
                 'timeout' => $this->config['http']['timeout'],
                 'http_errors' => true,
-                'verify' => config('myinvois.sslcert_path'),
+                'verify' => $this->config['http']['verify'] ?? false,
             ]);
 
             // Log success

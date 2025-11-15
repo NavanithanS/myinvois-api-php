@@ -28,6 +28,10 @@ class DocumentTypeVersion extends DataTransferObject implements JsonSerializable
 
     public $status;
 
+    // Optional base64-encoded schema fields as returned by API
+    public $jsonSchema;
+    public $xmlSchema;
+
     /**
      * Create a new DocumentTypeVersion instance from an array.
      *
@@ -40,7 +44,6 @@ class DocumentTypeVersion extends DataTransferObject implements JsonSerializable
         // Validate required fields
         Assert::keyExists($data, 'id', 'Version must have an ID');
         Assert::keyExists($data, 'name', 'Version must have a name');
-        Assert::keyExists($data, 'description', 'Version must have a description');
         Assert::keyExists($data, 'activeFrom', 'Version must have an active from date');
         Assert::keyExists($data, 'versionNumber', 'Version must have a version number');
         Assert::keyExists($data, 'status', 'Version must have a status');
@@ -57,11 +60,13 @@ class DocumentTypeVersion extends DataTransferObject implements JsonSerializable
         return new self([
             'id' => $data['id'],
             'name' => $data['name'],
-            'description' => $data['description'],
+            'description' => $data['description'] ?? null,
             'activeFrom' => new DateTimeImmutable($data['activeFrom']),
             'activeTo' => isset($data['activeTo']) ? new DateTimeImmutable($data['activeTo']) : null,
             'versionNumber' => (float) $data['versionNumber'],
             'status' => $data['status'],
+            'jsonSchema' => $data['jsonSchema'] ?? null,
+            'xmlSchema' => $data['xmlSchema'] ?? null,
         ]);
     }
 

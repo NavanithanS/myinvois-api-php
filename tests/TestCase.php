@@ -11,6 +11,8 @@ use GuzzleHttp\Psr7\Response;
 use Nava\MyInvois\Config;
 use Nava\MyInvois\MyInvoisClient;
 use Orchestra\Testbench\TestCase as BaseTestCase;
+use Illuminate\Contracts\Debug\ExceptionHandler as ExceptionHandlerContract;
+use Illuminate\Cache\CacheServiceProvider;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -87,7 +89,19 @@ abstract class TestCase extends BaseTestCase
 
     protected function defineEnvironment($app): void
     {
+        // Ensure cache service is available for tests using Cache::store()
+        $app->register(CacheServiceProvider::class);
         $app['config']->set('myinvois.client_id', 'test_client_id');
         $app['config']->set('myinvois.client_secret', 'test_client_secret');
+
+        // Bind a simple exception handler to satisfy Laravel 8 container in tests
+        $app->singleton(ExceptionHandlerContract::class, function () {
+            return new class implements ExceptionHandlerContract {
+                public function report(\Throwable $e) {}
+                public function shouldReport(\Throwable $e) { return false; }
+                public function render($request, \Throwable $e) { return response('Error', 500); }
+                public function renderForConsole($output, \Throwable $e) {}
+            };
+        });
     }
 }

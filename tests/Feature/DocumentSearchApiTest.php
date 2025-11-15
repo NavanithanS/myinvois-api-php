@@ -333,7 +333,13 @@ class DocumentSearchApiTest extends TestCase
         // Verify all parameters were properly included
         foreach ($filters as $key => $value) {
             $this->assertArrayHasKey($key, $query);
-            $this->assertEquals($value, $query[$key]);
+            $expected = $value;
+            if ($value instanceof \Nava\MyInvois\Enums\DocumentStatusEnum) {
+                $expected = $value->value;
+            } elseif ($value instanceof \Nava\MyInvois\Enums\DocumentTypeEnum) {
+                $expected = (string) $value->value;
+            }
+            $this->assertEquals($expected, $query[$key]);
         }
     }
 }

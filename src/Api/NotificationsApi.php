@@ -78,27 +78,36 @@ trait NotificationsApi
     private function validateNotificationFilters(array $filters): void
     {
         if (isset($filters['pageSize'])) {
-            Assert::range($filters['pageSize'], 1, 100, 'Page size must be between 1 and 100');
+            $ps = (int) $filters['pageSize'];
+            if ($ps < 1 || $ps > 100) {
+                throw new ValidationException('Page size must be between 1 and 100');
+            }
         }
 
         if (isset($filters['pageNo'])) {
-            Assert::greaterThan($filters['pageNo'], 0, 'Page number must be greater than 0');
+            if ((int) $filters['pageNo'] <= 0) {
+                throw new ValidationException('Page number must be greater than 0');
+            }
         }
 
         if (isset($filters['language'])) {
-            Assert::inArray($filters['language'], ['ms', 'en'], 'Language must be either "ms" or "en"');
+            if (!in_array($filters['language'], ['ms', 'en'], true)) {
+                throw new ValidationException('Language must be either "ms" or "en"');
+            }
         }
 
         if (isset($filters['type'])) {
-            Assert::inArray($filters['type'], [3, 6, 7, 8, 10, 11, 15, 26, 33, 34, 35],
-                'Invalid notification type'
-            );
+            $validTypes = [3, 6, 7, 8, 10, 11, 15, 26, 33, 34, 35];
+            if (!in_array((int) $filters['type'], $validTypes, true)) {
+                throw new ValidationException('Invalid notification type');
+            }
         }
 
         if (isset($filters['status'])) {
-            Assert::inArray($filters['status'], [1, 2, 3, 4, 5],
-                'Invalid notification status'
-            );
+            $validStatuses = [1, 2, 3, 4, 5];
+            if (!in_array((int) $filters['status'], $validStatuses, true)) {
+                throw new ValidationException('Invalid notification status');
+            }
         }
 
         // Validate date range

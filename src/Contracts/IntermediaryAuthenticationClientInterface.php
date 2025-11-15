@@ -69,7 +69,7 @@ interface IntermediaryAuthenticationClientInterface extends AuthenticationClient
      * @throws AuthenticationException If authentication fails or intermediary is not authorized
      * @throws NetworkException If a network error occurs
      */
-    public function authenticate(): array;
+    public function authenticate(string $tin): array;
 
     /**
      * Get a valid access token for the current taxpayer.

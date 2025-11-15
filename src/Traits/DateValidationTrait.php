@@ -99,7 +99,7 @@ trait DateValidationTrait
             // If one date is provided, the other becomes required
             if ((null === $parsedStartDate) xor (null === $parsedEndDate)) {
                 throw new ValidationException(
-                    "Both {$fieldName} start and end dates are required",
+                    'Both start and end dates are required',
                     ["{$fieldName}_range" => ['Both start and end dates must be provided']]
                 );
             }
@@ -107,7 +107,7 @@ trait DateValidationTrait
             // Validate date order
             if ($parsedStartDate && $parsedEndDate && $parsedStartDate > $parsedEndDate) {
                 throw new ValidationException(
-                    "Invalid {$fieldName} range",
+                    'Start date must be before end date',
                     ["{$fieldName}_range" => ['Start date must be before end date']]
                 );
             }
@@ -117,7 +117,7 @@ trait DateValidationTrait
                 $daysDifference = $parsedStartDate->diff($parsedEndDate)->days;
                 if ($daysDifference > $maxDaysDifference) {
                     throw new ValidationException(
-                        "Invalid {$fieldName} range",
+                        "Date range cannot exceed {$maxDaysDifference} days",
                         ["{$fieldName}_range" => ["Date range cannot exceed {$maxDaysDifference} days"]]
                     );
                 }
@@ -128,7 +128,10 @@ trait DateValidationTrait
                 'end' => $parsedEndDate,
             ];
 
-        } catch (\Exception $e) {
+        } catch (ValidationException $e) {
+            // Preserve previously thrown validation semantics (range/order messages)
+            throw $e;
+        } catch (\Throwable $e) {
             throw new ValidationException(
                 "Invalid {$fieldName} format",
                 ["{$fieldName}_format" => [$e->getMessage()]]

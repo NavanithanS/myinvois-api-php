@@ -6,6 +6,7 @@ use DateTimeImmutable;
 use GuzzleHttp\Psr7\Response;
 use Nava\MyInvois\Exception\ApiException;
 use Nava\MyInvois\Exception\ValidationException;
+use Nava\MyInvois\MyInvoisClient;
 use Nava\MyInvois\Tests\TestCase;
 use Psr\Log\LoggerInterface;
 

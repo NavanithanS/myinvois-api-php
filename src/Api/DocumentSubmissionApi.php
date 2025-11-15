@@ -21,21 +21,21 @@ trait DocumentSubmissionApi
 
     protected $logger = null;
 
-    private $MAX_SUBMISSION_SIZE = 5 * 1024 * 1024; // 5 MB
+    private const MAX_SUBMISSION_SIZE = 5 * 1024 * 1024; // 5 MB
 
-    private $MAX_DOCUMENT_SIZE = 300 * 1024; // 300 KB
+    private const MAX_DOCUMENT_SIZE = 300 * 1024; // 300 KB
 
-    private $MAX_DOCUMENTS_PER_SUBMISSION = 100;
+    private const MAX_DOCUMENTS_PER_SUBMISSION = 100;
 
-    private $DUPLICATE_DETECTION_WINDOW = 600; // 10 minutes
+    private const DUPLICATE_DETECTION_WINDOW = 600; // 10 minutes
 
-    private $SUBMISSION_ENDPOINT = '/api/v1.0/documentsubmissions';
+    private const SUBMISSION_ENDPOINT = '/api/v1.0/documentsubmissions';
 
     /**
      * Submit one or more documents to MyInvois.
      *
      * @param  array[]  $documents  Array of document data following MyInvois schema
-     * @param  DocumentFormat  $format  Format of the documents (JSON or XML)
+     * @param  string  $format  Format of the documents (JSON or XML)
      * @return array{
      *     submissionUID: string,
      *     acceptedDocuments: array<array{uuid: string, invoiceCodeNumber: string}>,
@@ -45,7 +45,7 @@ trait DocumentSubmissionApi
      * @throws ValidationException If the submission is invalid
      * @throws ApiException If the API request fails
      */
-    public function submitDocuments(array $documents, DocumentFormat $format = DocumentFormat::JSON): array
+    public function submitDocuments(array $documents, $format = DocumentFormat::JSON): array
     {
         $maxRetries = 3;
         $attempt = 0;
@@ -56,21 +56,19 @@ trait DocumentSubmissionApi
                 $this->checkRateLimit('submission');
                 $this->validateSubmission($documents);
 
-                $this->logDebug('Starting document submission', [
+                $this->logDebug('Submitting documents', [
                     'attempt' => $attempt + 1,
                     'count' => count($documents),
-                    'format' => $format->value,
+                    'format' => is_string($format) ? $format : (string) $format,
                 ]);
 
-                $preparedDocuments = array_map(
-                    function (array $doc) use ($format) {
-                        return $this->prepareDocument($doc, $format);
-                    },
-                    $documents
-                );                
+                $fmt = is_string($format) ? strtoupper($format) : (string) $format;
+                $preparedDocuments = array_map(function (array $doc) use ($fmt) {
+                    return $this->prepareDocument($doc, $fmt);
+                }, $documents);
 
-                $response = $this->apiClient->request('POST', self::$SUBMISSION_ENDPOINT, [
-                    'headers' => ['Content-Type' => $this->getContentType($format)],
+                $response = $this->apiClient->request('POST', self::SUBMISSION_ENDPOINT, [
+                    'headers' => ['Content-Type' => $this->getContentType($fmt)],
                     'json' => ['documents' => $preparedDocuments],
                     'timeout' => 30,
                 ]);
@@ -81,6 +79,8 @@ trait DocumentSubmissionApi
 
             } catch (ApiException $e) {
                 $lastException = $e;
+                // Map known API errors to domain-specific validation exceptions
+                $this->handleSubmissionError($e, $documents);
                 if (!$this->isRetryableError($e)) {
                     throw $e;
                 }
@@ -98,7 +98,7 @@ trait DocumentSubmissionApi
      * Submit a single document.
      *
      * @param  array  $document  Document data following MyInvois schema
-     * @param  DocumentFormat  $format  Format of the document
+     * @param  string  $format  Format of the document
      * @return array Submission response
      *
      * @throws ValidationException|ApiException
@@ -166,24 +166,28 @@ trait DocumentSubmissionApi
     {
         // Validate document count
         Assert::notEmpty($documents, 'At least one document is required');
-        Assert::maxCount(
-            $documents,
-            self::$MAX_DOCUMENTS_PER_SUBMISSION,
-            sprintf('Maximum of %d documents per submission allowed', self::$MAX_DOCUMENTS_PER_SUBMISSION)
-        );
+        try {
+            Assert::maxCount(
+                $documents,
+                self::MAX_DOCUMENTS_PER_SUBMISSION,
+                sprintf('Maximum of %d documents per submission allowed', self::MAX_DOCUMENTS_PER_SUBMISSION)
+            );
+        } catch (\InvalidArgumentException $e) {
+            throw new ValidationException(sprintf('Maximum of %d documents per submission allowed', self::MAX_DOCUMENTS_PER_SUBMISSION));
+        }
+
+        // Validate individual documents first (so missing fields are caught before size calc)
+        foreach ($documents as $index => $document) {
+            $this->validateDocument($document, $index);
+        }
 
         // Validate total size
         $totalSize = $this->calculateSubmissionSize($documents);
-        if ($totalSize > self::$MAX_SUBMISSION_SIZE) {
+        if ($totalSize > self::MAX_SUBMISSION_SIZE) {
             throw new ValidationException(
                 'Maximum submission size exceeded',
                 ['size' => ['Total submission size must not exceed 5MB']]
             );
-        }
-
-        // Validate individual documents
-        foreach ($documents as $index => $document) {
-            $this->validateDocument($document, $index);
         }
 
         // Validate unique code numbers
@@ -199,20 +203,17 @@ trait DocumentSubmissionApi
     {
         $requiredFields = ['document', 'documentHash', 'codeNumber'];
         foreach ($requiredFields as $field) {
-            Assert::keyExists(
-                $document,
-                $field,
-                sprintf('Document at index %d is missing required field: %s', $index, $field)
-            );
+            if (! array_key_exists($field, $document)) {
+                throw new ValidationException(
+                    sprintf('Document at index %d is missing required field: %s', $index, $field)
+                );
+            }
         }
 
         // Validate document size
-        $size = strlen($document['document']);
-        if ($size > self::$MAX_DOCUMENT_SIZE) {
-            throw new ValidationException(
-                sprintf('Document %s exceeds maximum size', $document['codeNumber']),
-                ['size' => ['Individual document size must not exceed 300KB']]
-            );
+        $size = strlen($document['document'] ?? '');
+        if ($size > self::MAX_DOCUMENT_SIZE) {
+            throw new ValidationException('Maximum document size is 300KB');
         }
 
         // Validate code number format
@@ -241,6 +242,15 @@ trait DocumentSubmissionApi
     }
 
     /**
+     * Determine if an error is retryable.
+     */
+    private function isRetryableError(ApiException $e): bool
+    {
+        $code = (int) $e->getCode();
+        return $code === 429 || $code >= 500;
+    }
+
+    /**
      * Validate that all code numbers are unique within the submission.
      *
      * @throws ValidationException If duplicate code numbers are found
@@ -262,18 +272,18 @@ trait DocumentSubmissionApi
     /**
      * Prepare a document for submission.
      */
-    private function prepareDocument(array $document, DocumentFormat $format): array
+    private function prepareDocument(array $document, $format): array
     {
         // Minify document content if JSON/XML
         $content = $document['document'];
-        if (DocumentFormat::JSON === $format) {
+        if (strtoupper($format) === DocumentFormat::JSON) {
             $content = $this->minifyJson($content);
-        } elseif (DocumentFormat::XML === $format) {
+        } elseif (strtoupper($format) === DocumentFormat::XML) {
             $content = $this->minifyXml($content);
         }
 
         return [
-            'format' => $format->value,
+            'format' => strtoupper($format),
             'document' => base64_encode($content),
             'documentHash' => $document['documentHash'],
             'codeNumber' => $document['codeNumber'],
@@ -332,13 +342,15 @@ trait DocumentSubmissionApi
     /**
      * Get content type header value based on format.
      */
-    private function getContentType(DocumentFormat $format): string
+    private function getContentType($format): string
     {
-        switch ($format) {
-            case DocumentFormat::JSON:
-                return 'application/json';
+        $fmt = is_string($format) ? strtoupper($format) : (string) $format;
+        switch ($fmt) {
             case DocumentFormat::XML:
                 return 'application/xml';
+            case DocumentFormat::JSON:
+            default:
+                return 'application/json';
         }
     }
 
@@ -375,13 +387,11 @@ trait DocumentSubmissionApi
                 break;
 
             case 403:
-                if (str_contains($message, 'IncorrectSubmitter')) {
-                    throw new ValidationException(
-                        'Invalid submitter',
-                        ['submitter' => ['Not authorized to submit documents for this taxpayer']]
-                    );
-                }
-                break;
+                // Normalize unauthorized submitter errors
+                throw new ValidationException(
+                    'Invalid submitter',
+                    ['submitter' => ['Not authorized to submit documents for this taxpayer']]
+                );
 
             case 422:
                 if (str_contains($message, 'DuplicateSubmission')) {
@@ -399,10 +409,13 @@ trait DocumentSubmissionApi
      */
     private function logSubmissionResults(array $response): void
     {
+        if (! isset($response['submissionUID']) || ! isset($response['acceptedDocuments']) || ! isset($response['rejectedDocuments'])) {
+            throw new ApiException('Invalid response format from submission endpoint');
+        }
         $acceptedCount = count($response['acceptedDocuments'] ?? []);
         $rejectedCount = count($response['rejectedDocuments'] ?? []);
 
-        $this->logDebug('Document submission completed', [
+        $this->logDebug('documents submitted successfully', [
             'submission_id' => $response['submissionUID'],
             'accepted_count' => $acceptedCount,
             'rejected_count' => $rejectedCount,

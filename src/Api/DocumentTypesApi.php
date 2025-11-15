@@ -39,6 +39,10 @@ trait DocumentTypesApi
 
             $types = array_map(
                 function (array $type) {
+                    if (isset($type['invoiceTypeCode']) && is_int($type['invoiceTypeCode'])) {
+                        // Normalize to enum object for feature expectations
+                        $type['invoiceTypeCode'] = \Nava\MyInvois\Enums\DocumentTypeEnum::from($type['invoiceTypeCode']);
+                    }
                     return DocumentType::fromArray($type);
                 },
                 $response['result']
@@ -69,7 +73,9 @@ trait DocumentTypesApi
     public function getDocumentType(int $id): DocumentType
     {
         try {
-            Assert::greaterThan($id, 0, 'Document type ID must be greater than 0');
+            if (!is_int($id) || $id <= 0) {
+                throw new ValidationException('Document type ID must be greater than 0');
+            }
 
             $response = $this->apiClient->request('GET', "/api/v1.0/documenttypes/{$id}");
 
@@ -77,7 +83,11 @@ trait DocumentTypesApi
                 throw new ApiException('Invalid response format from document type endpoint');
             }
 
-            $type = DocumentType::fromArray($response['result']);
+            $payload = $response['result'];
+            if (isset($payload['invoiceTypeCode']) && is_int($payload['invoiceTypeCode'])) {
+                $payload['invoiceTypeCode'] = \Nava\MyInvois\Enums\DocumentTypeEnum::from($payload['invoiceTypeCode']);
+            }
+            $type = DocumentType::fromArray($payload);
 
             $this->logDebug('Retrieved document type successfully', [
                 'id' => $id,
@@ -234,8 +244,12 @@ trait DocumentTypesApi
     public function isDocumentTypeVersionActive(int $documentTypeId, float $versionNumber): bool
     {
         try {
-            Assert::greaterThan($documentTypeId, 0, 'Document type ID must be greater than 0');
-            Assert::greaterThan($versionNumber, 0, 'Version number must be greater than 0');
+            if (!is_int($documentTypeId) || $documentTypeId <= 0) {
+                throw new ValidationException('Document type ID must be greater than 0');
+            }
+            if (!is_numeric($versionNumber) || $versionNumber <= 0) {
+                throw new ValidationException('Version number must be greater than 0');
+            }
 
             $documentType = $this->getDocumentType($documentTypeId);
 
@@ -281,9 +295,9 @@ trait DocumentTypesApi
      */
     public function getWorkflowParameterValue(int $documentTypeId, string $parameterName): ?int
     {
-        Assert::inArray($parameterName, WorkflowParameter::getValidParameters(),
-            'Invalid workflow parameter name'
-        );
+        if (!in_array($parameterName, WorkflowParameter::getValidParameters(), true)) {
+            throw new ValidationException('Invalid workflow parameter name');
+        }
 
         try {
             $documentType = $this->getDocumentType($documentTypeId);
@@ -351,9 +365,9 @@ trait DocumentTypesApi
      */
     public function hasActiveWorkflowParameter(int $documentTypeId, string $parameterName): bool
     {
-        Assert::inArray($parameterName, WorkflowParameter::getValidParameters(),
-            'Invalid workflow parameter name'
-        );
+        if (!in_array($parameterName, WorkflowParameter::getValidParameters(), true)) {
+            throw new ValidationException('Invalid workflow parameter name');
+        }
 
         try {
             $documentType = $this->getDocumentType($documentTypeId);

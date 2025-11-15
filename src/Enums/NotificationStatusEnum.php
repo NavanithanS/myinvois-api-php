@@ -2,158 +2,79 @@
 
 namespace Nava\MyInvois\Enums;
 
-/**
- * Represents the possible notification statuses in the MyInvois system.
- */
-class NotificationStatusEnum
+enum NotificationStatusEnum: int
 {
-    const NEW = 1;
-    const PENDING = 2;
-    const BATCHED = 3;
-    const DELIVERED = 4;
-    const ERROR = 5;
+    case NEW = 1;
+    case PENDING = 2;
+    case BATCHED = 3;
+    case DELIVERED = 4;
+    case ERROR = 5;
 
-    /**
-     * Returns a human-readable description of the notification status.
-     */
-    public static function description($status): string
+    public function description(): string
     {
-        switch ($status) {
-            case self::NEW:
-                return 'New';
-            case self::PENDING:
-                return 'Pending';
-            case self::BATCHED:
-                return 'Batched';
-            case self::DELIVERED:
-                return 'Delivered';
-            case self::ERROR:
-                return 'Error';
-            default:
-                throw new InvalidArgumentException("Invalid notification status.");
-        }
+        return match ($this) {
+            self::NEW => 'New',
+            self::PENDING => 'Pending',
+            self::BATCHED => 'Batched',
+            self::DELIVERED => 'Delivered',
+            self::ERROR => 'Error',
+        };
     }
 
-    /**
-     * Get all available notification status codes.
-     *
-     * @return array<int>
-     */
-    public static function getCodes(): array
-    {
-        return [
-            self::NEW,
-            self::PENDING,
-            self::BATCHED,
-            self::DELIVERED,
-            self::ERROR
-        ];
-    }
-
-    /**
-     * Determine if a code is valid.
-     */
     public static function isValidCode(int $code): bool
     {
-        return in_array($code, self::getCodes(), true);
+        return in_array($code, array_map(fn(self $c) => $c->value, self::cases()), true);
     }
 
-    /**
-     * Create from code.
-     *
-     * @throws \InvalidArgumentException If code is invalid
-     */
-    public static function fromCode(int $code)
+    public static function fromCode(int $code): self
     {
-        if (self::isValidCode($code)) {
-            return $code;
+        return self::from($code);
+    }
+
+    public static function fromName(string $name): self
+    {
+        $upper = strtoupper($name);
+        foreach (self::cases() as $case) {
+            if ($case->name === $upper) {
+                return $case;
+            }
         }
-        throw new InvalidArgumentException("Invalid code: $code");
+        throw new \ValueError("Invalid status name: $name");
     }
 
-    /**
-     * Create from status name.
-     *
-     * @throws \InvalidArgumentException If status name is invalid
-     */
-    public static function fromName(string $name)
+    public function isFinal(): bool
     {
-        switch (strtoupper($name)) {
-            case 'NEW':
-                return self::NEW;
-            case 'PENDING':
-                return self::PENDING;
-            case 'BATCHED':
-                return self::BATCHED;
-            case 'DELIVERED':
-                return self::DELIVERED;
-            case 'ERROR':
-                return self::ERROR;
-            default:
-                throw new InvalidArgumentException("Invalid status name: $name");
-        }
+        return in_array($this, [self::DELIVERED, self::ERROR], true);
     }
 
-    /**
-     * Check if the status represents a final state.
-     */
-    public static function isFinal($status): bool
+    public function isSuccessful(): bool
     {
-        return in_array($status, [self::DELIVERED, self::ERROR], true);
+        return $this === self::DELIVERED;
     }
 
-    /**
-     * Check if the status represents a successful state.
-     */
-    public static function isSuccessful($status): bool
+    public function isError(): bool
     {
-        return $status === self::DELIVERED;
+        return $this === self::ERROR;
     }
 
-    /**
-     * Check if the status represents an error state.
-     */
-    public static function isError($status): bool
+    public function isInProgress(): bool
     {
-        return $status === self::ERROR;
+        return in_array($this, [self::NEW, self::PENDING, self::BATCHED], true);
     }
 
-    /**
-     * Check if the status represents an in-progress state.
-     */
-    public static function isInProgress($status): bool
+    public function getValidTransitions(): array
     {
-        return in_array($status, [self::NEW, self::PENDING, self::BATCHED], true);
+        return match ($this) {
+            self::NEW => [self::PENDING, self::BATCHED],
+            self::PENDING => [self::BATCHED, self::DELIVERED, self::ERROR],
+            self::BATCHED => [self::DELIVERED, self::ERROR],
+            default => [],
+        };
     }
 
-    /**
-     * Get the list of valid status transitions from this status.
-     *
-     * @return array<int>
-     */
-    public static function getValidTransitions($status): array
+    public function canTransitionTo(self $to): bool
     {
-        switch ($status) {
-            case self::NEW:
-                return [self::PENDING, self::BATCHED];
-            case self::PENDING:
-                return [self::BATCHED, self::DELIVERED, self::ERROR];
-            case self::BATCHED:
-                return [self::DELIVERED, self::ERROR];
-            case self::DELIVERED:
-            case self::ERROR:
-                return [];
-            default:
-                throw new InvalidArgumentException("Invalid status: $status");
-        }
-    }
-
-    /**
-     * Check if a transition to the given status is valid.
-     */
-    public static function canTransitionTo($currentStatus, $newStatus): bool
-    {
-        return in_array($newStatus, self::getValidTransitions($currentStatus), true);
+        return in_array($to, $this->getValidTransitions(), true);
     }
 }
 

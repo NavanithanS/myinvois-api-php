@@ -3,7 +3,7 @@
 namespace Nava\MyInvois\Data;
 
 use DateTimeImmutable;
-use Nava\MyInvois\Enums\DocumentType as DocumentTypeEnum;
+use Nava\MyInvois\Enums\DocumentTypeEnum;
 use Spatie\DataTransferObject\DataTransferObject;
 use Webmozart\Assert\Assert;
 
@@ -22,10 +22,10 @@ class DocumentType extends DataTransferObject
 
     public $activeTo;
 
-    /** @var DocumentTypeVersion[] */
+    /** @var array */
     public $documentTypeVersions;
 
-    /** @var WorkflowParameter[] */
+    /** @var array */
     public $workflowParameters;
 
     /**
@@ -38,24 +38,30 @@ class DocumentType extends DataTransferObject
     public static function fromArray(array $data): self
     {
         Assert::keyExists($data, 'id', 'Document type must have an ID');
-        Assert::keyExists($data, 'invoiceTypeCode', 'Document type must have an invoice type code');
-        Assert::keyExists($data, 'description', 'Document type must have a description');
-        Assert::keyExists($data, 'activeFrom', 'Document type must have an active from date');
+        // Description is optional in some responses
+        // Active from can be omitted in some responses
         Assert::keyExists($data, 'documentTypeVersions', 'Document type must have versions array');
         Assert::isArray($data['documentTypeVersions'], 'Document type versions must be an array');
 
         // Validate invoice type code matches enum
         $validCodes = array_map(function ($case) {
-            return $case['value'];
-        }, DocumentTypeEnum::allCases());
+            return $case->value;
+        }, DocumentTypeEnum::cases());
 
-        Assert::inArray($data['invoiceTypeCode'], $validCodes, 'Invalid invoice type code');
+        if (isset($data['invoiceTypeCode'])) {
+            $code = $data['invoiceTypeCode'] instanceof DocumentTypeEnum ? $data['invoiceTypeCode']->value : $data['invoiceTypeCode'];
+            Assert::inArray($code, $validCodes, 'Invalid invoice type code');
+        }
 
         return new self([
             'id' => $data['id'],
-            'invoiceTypeCode' => $data['invoiceTypeCode'],
-            'description' => $data['description'],
-            'activeFrom' => new DateTimeImmutable($data['activeFrom']),
+            'invoiceTypeCode' => isset($data['invoiceTypeCode'])
+                ? ($data['invoiceTypeCode'] instanceof DocumentTypeEnum
+                    ? $data['invoiceTypeCode']
+                    : (int) $data['invoiceTypeCode'])
+                : null,
+            'description' => $data['description'] ?? null,
+            'activeFrom' => isset($data['activeFrom']) ? new DateTimeImmutable($data['activeFrom']) : new DateTimeImmutable(),
             'activeTo' => isset($data['activeTo']) ? new DateTimeImmutable($data['activeTo']) : null,
             'documentTypeVersions' => array_map(
                 function (array $version) {
@@ -143,6 +149,8 @@ class DocumentType extends DataTransferObject
      */
     public function getEnum(): DocumentTypeEnum
     {
-        return DocumentTypeEnum::from($this->invoiceTypeCode);
+        return $this->invoiceTypeCode instanceof DocumentTypeEnum
+            ? $this->invoiceTypeCode
+            : DocumentTypeEnum::from((int) $this->invoiceTypeCode);
     }
 }

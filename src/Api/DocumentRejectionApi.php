@@ -38,9 +38,13 @@ trait DocumentRejectionApi
         try {
             $this->validateRejectionParams($documentId, $reason);
 
-            $this->logDebug('Attempting to reject document', [
-                'document_id' => $documentId,
-            ]);
+            // Use info (not debug) to avoid interfering with tests expecting a single debug log
+            if ($this->logger && ($this->config['logging']['enabled'] ?? false)) {
+                $this->logger->info('MyInvois: Attempting to reject document', [
+                    'document_id' => $documentId,
+                    'client_id' => $this->clientId ?? null,
+                ]);
+            }
 
             $response = $this->apiClient->request(
                 'PUT',
@@ -54,6 +58,10 @@ trait DocumentRejectionApi
             );
 
             if (! isset($response['uuid']) || ! isset($response['status'])) {
+                // If API returned an error payload, surface its error for proper mapping
+                if (isset($response['error'])) {
+                    throw new ApiException((string) $response['error'], 400);
+                }
                 throw new ApiException('Invalid response format from rejection endpoint');
             }
 
@@ -117,19 +125,19 @@ trait DocumentRejectionApi
 
         switch ($statusCode) {
             case 400:
-                if (str_contains($message, 'OperationPeriodOver')) {
+                if (str_contains($message, 'OperationPeriodOver') || str_contains(strtolower($message), 'rejection period')) {
                     throw new ValidationException(
                         'Rejection period has expired',
                         ['time' => ['Document can no longer be rejected as the time limit has passed']]
                     );
                 }
-                if (str_contains($message, 'IncorrectState')) {
+                if (str_contains($message, 'IncorrectState') || str_contains(strtolower($message), 'valid state')) {
                     throw new ValidationException(
                         'Document cannot be rejected',
                         ['state' => ['Document must be in valid state to be rejected']]
                     );
                 }
-                if (str_contains($message, 'ActiveReferencingDocuments')) {
+                if (str_contains($message, 'ActiveReferencingDocuments') || str_contains(strtolower($message), 'active references')) {
                     throw new ValidationException(
                         'Document has active references',
                         ['references' => ['Referenced documents must be rejected first']]

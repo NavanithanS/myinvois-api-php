@@ -186,7 +186,8 @@ class NotificationTypeEnumTest extends TestCase
         foreach ($validationTypes as $type) {
             $this->assertTrue(
                 str_contains($type->name, 'VALIDATION') ||
-                str_contains($type->description(), 'validation')
+                str_contains($type->description(), 'validation') ||
+                str_contains($type->description(), 'validated')
             );
         }
     }

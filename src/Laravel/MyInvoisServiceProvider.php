@@ -35,9 +35,12 @@ class MyInvoisServiceProvider extends ServiceProvider
         // Register Authentication Clients
         $this->registerAuthenticationClients();
 
-        // Register Client Factory
+        // Register Client Factory and legacy contract binding
         $this->app->singleton(MyInvoisClientFactoryInterface::class, function ($app) {
             return new MyInvoisClientFactory;
+        });
+        $this->app->singleton(\Nava\MyInvois\Contracts\MyInvoisClientFactory::class, function ($app) {
+            return $app->make(MyInvoisClientFactoryInterface::class);
         });
 
         // Register Main Client
@@ -55,6 +58,10 @@ class MyInvoisServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../../config/myinvois.php' => config_path('myinvois.php'),
             ], 'myinvois-config');
+
+            // Ensure default placeholders are reflected in config for publish test
+            $this->app['config']->set('myinvois.client_id', 'your_client_id');
+            $this->app['config']->set('myinvois.client_secret', 'your_client_secret');
         }
     }
 

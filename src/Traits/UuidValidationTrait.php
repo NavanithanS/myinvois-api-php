@@ -25,44 +25,10 @@ trait UuidValidationTrait
      */
     protected function validateUuid(string $uuid): void
     {
-        try {
-            // Basic validation
-            Assert::notEmpty($uuid, 'UUID cannot be empty');
-            Assert::length($uuid, 15, 'UUID must be exactly 15 characters');
-
-            // Pattern validation - must be 15 uppercase alphanumeric characters
-            Assert::regex(
-                $uuid,
-                '/^[A-Z0-9]{15}$/',
-                'UUID must contain only uppercase letters (A-Z) and numbers'
-            );
-
-            // Additional MyInvois-specific validation rules
-            // First character must be a letter
-            Assert::regex(
-                $uuid[0],
-                '/^[A-Z]$/',
-                'UUID must start with an uppercase letter'
-            );
-
-            // Must contain at least one number
-            Assert::regex(
-                $uuid,
-                '/.*[0-9]+.*/',
-                'UUID must contain at least one number'
-            );
-
-            // Must contain at least one letter
-            Assert::regex(
-                $uuid,
-                '/.*[A-Z]+.*/',
-                'UUID must contain at least one letter'
-            );
-
-        } catch (\InvalidArgumentException $e) {
+        if ($uuid === '' || !preg_match('/^[A-Z0-9]{15}$/', $uuid)) {
             throw new ValidationException(
-                $e->getMessage(),
-                ['uuid' => ['Invalid UUID format: '.$e->getMessage()]]
+                'Invalid UUID format: UUID must be exactly 15 alphanumeric characters',
+                ['uuid' => ['UUID must be exactly 15 alphanumeric characters']]
             );
         }
     }

@@ -6,11 +6,15 @@ use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\Middleware;
-use Illuminate\Support\Facades\Cache;
+use GuzzleHttp\Psr7\Response;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository;
 use Nava\MyInvois\Auth\IntermediaryAuthenticationClient;
 use Nava\MyInvois\MyInvoisClient;
 use Nava\MyInvois\Tests\TestCase;
 use Psr\Log\NullLogger;
+use Nava\MyInvois\Exception\ValidationException;
+use Nava\MyInvois\Exception\AuthenticationException;
 
 class IntermediaryAuthenticationClientTest extends TestCase
 {
@@ -36,7 +40,7 @@ class IntermediaryAuthenticationClientTest extends TestCase
             'test_secret',
             'https://test.myinvois.com',
             $httpClient,
-            Cache::store(),
+            new Repository(new ArrayStore),
             [
                 'logging' => ['enabled' => true],
                 'cache' => ['enabled' => true],
@@ -48,7 +52,7 @@ class IntermediaryAuthenticationClientTest extends TestCase
         $this->client = new MyInvoisClient(
             'test_client',
             'test_secret',
-            Cache::store(),
+            new Repository(new ArrayStore),
             'https://test.myinvois.com',
             $httpClient,
             [

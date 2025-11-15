@@ -82,6 +82,9 @@ class Config
             case 'debit_note':
                 $supportedVersions = self::DEBIT_NOTE_SUPPORTED_VERSIONS;
                 break;
+            case 'refund_note':
+                $supportedVersions = self::REFUND_NOTE_SUPPORTED_VERSIONS;
+                break;
             default:
                 $supportedVersions = [];
                 break;
@@ -108,6 +111,8 @@ class Config
                 return self::CREDIT_NOTE_CURRENT_VERSION;
             case 'debit_note':
                 return self::DEBIT_NOTE_CURRENT_VERSION;
+            case 'refund_note':
+                return self::REFUND_NOTE_CURRENT_VERSION;
             default:
                 throw new \InvalidArgumentException(
                     'Invalid document type. Must be one of: invoice, credit_note, debit_note'

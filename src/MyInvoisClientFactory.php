@@ -9,7 +9,7 @@ use Nava\MyInvois\Auth\IntermediaryAuthenticationClient;
 use Nava\MyInvois\Contracts\MyInvoisClientFactoryInterface;
 use Nava\MyInvois\Exception\ValidationException;
 
-class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
+class MyInvoisClientFactory implements \Nava\MyInvois\Contracts\MyInvoisClientFactoryInterface, \Nava\MyInvois\Contracts\MyInvoisClientFactory
 {
     private $defaultOptions = [];
 
@@ -39,10 +39,11 @@ class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
             'http_errors' => true,
         ]);
 
-        // Determine identity service URL based on base URL
-        $identityUrl = str_contains($baseUrl, 'preprod')
-        ? MyInvoisClient::IDENTITY_SANDBOX_URL
-        : MyInvoisClient::IDENTITY_PRODUCTION_URL;
+        // Determine identity service URL: prefer configured auth URL, else derive from base URL
+        $identityUrl = config('myinvois.auth.url')
+            ?? (str_contains($baseUrl, 'preprod')
+                ? MyInvoisClient::IDENTITY_SANDBOX_URL
+                : MyInvoisClient::IDENTITY_PRODUCTION_URL);
 
         // Create authentication client
         $authClient = new AuthenticationClient(
@@ -118,10 +119,12 @@ class MyInvoisClientFactory implements MyInvoisClientFactoryInterface
         string $taxpayerTin,
         array $options = []
     ): MyInvoisClient {
-        $baseUrl = $options['baseUrl'] ?? MyInvoisClient::PRODUCTION_URL;
-        $identityUrl = str_contains($baseUrl, 'preprod')
-        ? MyInvoisClient::IDENTITY_SANDBOX_URL
-        : MyInvoisClient::IDENTITY_PRODUCTION_URL;
+        $baseUrl = $options['baseUrl'] ?? config('myinvois.base_url', MyInvoisClient::PRODUCTION_URL);
+        $identityUrl = $options['identityUrl']
+            ?? config('myinvois.auth.url')
+            ?? (str_contains($baseUrl, 'preprod')
+                ? MyInvoisClient::IDENTITY_SANDBOX_URL
+                : MyInvoisClient::IDENTITY_PRODUCTION_URL);
 
         $httpClient = new GuzzleClient([
             'timeout' => $options['timeout'] ?? 30,

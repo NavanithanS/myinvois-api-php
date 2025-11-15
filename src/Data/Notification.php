@@ -40,7 +40,7 @@ class Notification extends DataTransferObject implements JsonSerializable
 
     public $status;
 
-    /** @var DeliveryAttempt[] */
+    /** @var array */
     public $deliveryAttempts;
 
     /**
@@ -52,7 +52,7 @@ class Notification extends DataTransferObject implements JsonSerializable
      */
     public static function fromArray(array $data): self
     {
-        Assert::keyExists($data, 'notificationId', 'Notification ID is required');
+        Assert::keyExists($data, 'notificationId', 'Notification Id is required');
         Assert::keyExists($data, 'receiverName', 'Receiver name is required');
         Assert::keyExists($data, 'notificationDeliveryId', 'Notification delivery ID is required');
         Assert::keyExists($data, 'creationDateTime', 'Creation date time is required');
@@ -114,7 +114,7 @@ class Notification extends DataTransferObject implements JsonSerializable
             'language' => $this->language,
             'status' => $this->status,
             'deliveryAttempts' => array_map(function (DeliveryAttempt $attempt) {
-                return $attempt->toArray();
+                return $attempt->jsonSerialize();
             }, $this->deliveryAttempts),
         ];
     }
@@ -199,7 +199,7 @@ class Notification extends DataTransferObject implements JsonSerializable
             'language' => $this->language,
             'status' => $this->status,
             'deliveryAttempts' => array_map(function (DeliveryAttempt $attempt) {
-                return $attempt->toArray();
+                return $attempt->jsonSerialize();
             }, $this->deliveryAttempts),
         ];
     }

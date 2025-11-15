@@ -2,78 +2,35 @@
 
 namespace Nava\MyInvois\Enums;
 
-use InvalidArgumentException;
-
-/**
- * Represents the possible document statuses in the MyInvois system.
- */
-class DocumentStatusEnum
+enum DocumentStatusEnum: string
 {
-    const VALID = 'Valid';
-    const INVALID = 'Invalid';
-    const SUBMITTED = 'Submitted';
-    const CANCELLED = 'Cancelled';
-    const PENDING = 'Pending';
-    const REJECTED = 'Rejected';
+    case VALID = 'Valid';
+    case INVALID = 'Invalid';
+    case SUBMITTED = 'Submitted';
+    case CANCELLED = 'Cancelled';
+    case PENDING = 'Pending';
+    case REJECTED = 'Rejected';
 
-    /**
-     * Returns a human-readable description of the document status.
-     */
-    public static function description(string $status): string
+    public function description(): string
     {
-        switch ($status) {
-            case self::VALID:
-                return 'Valid Document';
-            case self::INVALID:
-                return 'Invalid Document';
-            case self::SUBMITTED:
-                return 'Submitted Document';
-            case self::CANCELLED:
-                return 'Cancelled Document';
-            case self::PENDING:
-                return 'Pending Document';
-            case self::REJECTED:
-                return 'Rejected Document';
-            default:
-                throw new InvalidArgumentException("Invalid document status: $status");
-        }
+        return match ($this) {
+            self::VALID => 'Valid Document',
+            self::INVALID => 'Invalid Document',
+            self::SUBMITTED => 'Submitted Document',
+            self::CANCELLED => 'Cancelled Document',
+            self::PENDING => 'Pending Document',
+            self::REJECTED => 'Rejected Document',
+        };
     }
 
-    /**
-     * Get all available document status values.
-     *
-     * @return array<string>
-     */
-    public static function getValues(): array
+    public static function getValidStatuses(): array
     {
-        return [
-            self::VALID,
-            self::INVALID,
-            self::SUBMITTED,
-            self::CANCELLED,
-            self::PENDING,
-            self::REJECTED,
-        ];
+        return array_map(fn(self $c) => $c->value, self::cases());
     }
 
-    /**
-     * Determine if a status is valid.
-     */
-    public static function isValidStatus(string $status): bool
+    public static function fromName(string $name): self
     {
-        return in_array($status, self::getValues(), true);
-    }
-
-    /**
-     * Create from status string.
-     *
-     * @throws \InvalidArgumentException If status is invalid
-     */
-    public static function fromStatus(string $status): string
-    {
-        if (self::isValidStatus($status)) {
-            return $status;
-        }
-        throw new InvalidArgumentException("Invalid status: $status");
+        // Name here is actually the value (e.g., 'Valid'), so use from(value)
+        return self::from($name);
     }
 }

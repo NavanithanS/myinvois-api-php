@@ -37,12 +37,10 @@ trait RateLimitingTrait
         $cacheKey = $config['cache_prefix'] . $key;
 
         // Get current request count
-        // $requestCount = $this->cache->get($cacheKey, 0);
         if (!isset($this->cache)) {
             $this->cache = app('cache')->store();
         }
-        
-        $requestCount = $this->cache->get('cacheKey');
+        $requestCount = (int) $this->cache->get($cacheKey, 0);
         
         // Check if rate limit is exceeded
         if ($requestCount >= $config['max_requests']) {

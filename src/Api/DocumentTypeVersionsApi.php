@@ -24,11 +24,15 @@ trait DocumentTypeVersionsApi
      * @throws ApiException If the API request fails
      * @throws ValidationException If the input parameters are invalid
      */
-    public function getDocumentTypeVersion(int $documentTypeId, int $versionId): DocumentTypeVersion
+    public function getDocumentTypeVersion($documentTypeId, $versionId): DocumentTypeVersion
     {
         try {
-            Assert::greaterThan($documentTypeId, 0, 'Document type ID must be greater than 0');
-            Assert::greaterThan($versionId, 0, 'Version ID must be greater than 0');
+            if (!is_int($documentTypeId) || $documentTypeId <= 0) {
+                throw new ValidationException('Document type ID must be greater than 0');
+            }
+            if (!is_int($versionId) || $versionId <= 0) {
+                throw new ValidationException('Version ID must be greater than 0');
+            }
 
             $response = $this->apiClient->request(
                 'GET',
@@ -191,7 +195,9 @@ trait DocumentTypeVersionsApi
      */
     public function getDocumentTypeVersionSchema(DocumentTypeVersion $version, string $format): string
     {
-        Assert::inArray($format, ['json', 'xml'], 'Format must be either "json" or "xml"');
+        if (!in_array($format, ['json', 'xml'], true)) {
+            throw new ValidationException('Format must be either "json" or "xml"');
+        }
 
         $schemaField = $format === 'json' ? 'jsonSchema' : 'xmlSchema';
         $schema = $version->{$schemaField} ?? null;

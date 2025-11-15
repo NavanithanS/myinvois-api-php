@@ -241,14 +241,13 @@ class TaxpayerApiTest extends TestCase
         $this->assertTrue($result);
 
         // Verify that ID types were normalized to uppercase in requests
-        $requests = array_map(function ($transaction) {
+        $requests = array_values(array_filter(array_map(function ($transaction) {
             parse_str($transaction['request']->getUri()->getQuery(), $query);
+            return $query['idType'] ?? null;
+        }, $this->container)));
 
-            return $query['idType'];
-        }, $this->container);
-
-        $this->assertEquals('NRIC', $requests[1]);
-        $this->assertEquals('PASSPORT', $requests[2]);
+        $this->assertEquals('NRIC', $requests[0]);
+        $this->assertEquals('PASSPORT', $requests[1]);
     }
 
     /** @test */

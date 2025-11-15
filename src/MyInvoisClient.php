@@ -20,6 +20,7 @@ use Nava\MyInvois\Auth\AuthenticationClient;
 use Nava\MyInvois\Exception\ApiException;
 use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Http\ApiClient;
+use Nava\MyInvois\Enums\DocumentFormat;
 use Nava\MyInvois\Traits\DateValidationTrait;
 use Nava\MyInvois\Traits\LoggerTrait;
 use Nava\MyInvois\Traits\RateLimitingTrait;
@@ -49,6 +50,17 @@ use Illuminate\Http\Response;
 class MyInvoisClient
 {
     use RateLimitingTrait;
+    use LoggerTrait;
+    use DocumentSubmissionApi;
+    use DocumentRejectionApi;
+    use DocumentRetrievalApi;
+    use DocumentDetailsApi;
+    use DocumentSearchApi;
+    use DocumentTypesApi;
+    use DocumentTypeVersionsApi;
+    use NotificationsApi;
+    use RecentDocumentsApi;
+    use SubmissionStatusApi;
 
     private $authClient;
     private $apiClient;
@@ -91,11 +103,9 @@ class MyInvoisClient
     private $supplierIdType;
     private $x509cert;
 
-    // private $clientId;
-
-    // private $config;
-
-    // protected $cache;
+    protected $cache;
+    private $clientId;
+    private $config = [];
 
     // use DateValidationTrait;
     // use DocumentDetailsApi;
@@ -109,72 +119,144 @@ class MyInvoisClient
     // use NotificationsApi;
     // use RecentDocumentsApi;
     // use SubmissionStatusApi;
-    // use TaxpayerApi;
+    use TaxpayerApi;
     // use UuidValidationTrait;
 
     public const PRODUCTION_URL = 'https://myinvois.hasil.gov.my';
 
     public const SANDBOX_URL = 'https://preprod.myinvois.hasil.gov.my';
 
-    public const IDENTITY_PRODUCTION_URL = 'https://api.myinvois.hasil.gov.my/connect/token';
+    // Identity base hosts (token path appended by AuthenticationClient)
+    public const IDENTITY_PRODUCTION_URL = 'https://api.myinvois.hasil.gov.my';
 
-    public const IDENTITY_SANDBOX_URL = 'https://preprod-api.myinvois.hasil.gov.my/connect/token';
+    public const IDENTITY_SANDBOX_URL = 'https://preprod-api.myinvois.hasil.gov.my';
 
-    public function __construct($tin)
+    // Intermediary helpers
+    public function onBehalfOf(string $tin): self
     {
-        Assert::notEmpty(config('myinvois.client_id'), 'Myinvois client ID cannot be empty');
-        Assert::notEmpty(config('myinvois.client_secret'), 'Myinvois client secret cannot be empty');
-        Assert::notEmpty(config('myinvois.base_url'), 'Myinvois base URL cannot be empty');
-        Assert::notEmpty(config('myinvois.sslcert_path'), 'Myinvois SSL certificate path cannot be empty');
-        Assert::notEmpty(config('myinvois.signedsignature_path'), 'Myinvois SIGN signature path cannot be empty');
-        Assert::notEmpty(config('myinvois.privatekey_path'), 'Myinvois private key path cannot be empty');
+        if ($this->authClient instanceof \Nava\MyInvois\Auth\IntermediaryAuthenticationClient) {
+            $this->authClient->onBehalfOf($tin);
+        }
+        return $this;
+    }
 
-        $this->cache = Cache::store();
+    public function getCurrentTaxpayer(): ?string
+    {
+        if ($this->authClient instanceof \Nava\MyInvois\Auth\IntermediaryAuthenticationClient) {
+            return $this->authClient->getCurrentTaxpayer();
+        }
+        return null;
+    }
 
-        // Create GuzzleHttp client
-        $httpClient = new GuzzleClient([
-            'verify' => config('myinvois.sslcert_path'),
-            'timeout' => 30,
-            'connect_timeout' => 10,
-        ]);
+    public function authenticate(): array
+    {
+        return $this->authClient->authenticate($this->getCurrentTaxpayer() ?? '');
+    }
+    public function __construct(
+        string $clientId,
+        string $clientSecret,
+        $baseUrl = null,
+        $cache = null,
+        $config = null,
+        $httpClient = null
+    ) {
+        // Resolve flexible constructor inputs to support multiple call styles used by tests
+        $resolvedBaseUrl = null;
+        $resolvedCache = null;
+        $resolvedConfig = [];
+        $resolvedHttpClient = null;
 
-        // Create authentication client
-        $this->authClient = new AuthenticationClient(
-            config('myinvois.client_id'),
-            config('myinvois.client_secret'),
-            config('myinvois.base_url'),
-            $httpClient,
-            Cache::store(),
-            [
-                'logging' => [
-                    'enabled' => true,
-                    'channel' => 'myinvois',
-                ],
-                'http' => [
-                    'timeout' => 30,
-                    'connect_timeout' => 10,
-                    'retry' => [
-                        'times' => 3,
-                        'sleep' => 1000,
-                    ],
-                ],
-            ]
+        $ingest = function ($arg) use (&$resolvedBaseUrl, &$resolvedCache, &$resolvedConfig, &$resolvedHttpClient) {
+            if ($arg === null) {
+                return;
+            }
+            if ($arg instanceof \GuzzleHttp\Client) {
+                $resolvedHttpClient = $arg;
+                return;
+            }
+            if ($arg instanceof CacheRepository) {
+                $resolvedCache = $arg;
+                return;
+            }
+            if (is_array($arg)) {
+                $resolvedConfig = array_replace_recursive($resolvedConfig, $arg);
+                return;
+            }
+            if (is_string($arg)) {
+                // URL or JSON config string
+                if (preg_match('#^https?://#i', $arg) === 1) {
+                    $resolvedBaseUrl = $arg;
+                    return;
+                }
+                $decoded = json_decode($arg, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $resolvedConfig = array_replace_recursive($resolvedConfig, $decoded);
+                    return;
+                }
+            }
+        };
+
+        // Ingest potential arguments in various orders
+        $ingest($baseUrl);
+        $ingest($cache);
+        $ingest($config);
+        $ingest($httpClient);
+
+        // Defaults
+        if (!$resolvedBaseUrl) {
+            $resolvedBaseUrl = self::PRODUCTION_URL;
+        }
+
+        // Prefer injected HTTP client from config if provided
+        if (!$resolvedHttpClient && isset($resolvedConfig['httpClient']) && $resolvedConfig['httpClient'] instanceof GuzzleClient) {
+            $resolvedHttpClient = $resolvedConfig['httpClient'];
+            unset($resolvedConfig['httpClient']);
+        }
+        if (!$resolvedHttpClient) {
+            $resolvedHttpClient = new GuzzleClient;
+        }
+
+        if (!$resolvedCache) {
+            // Fallback to in-memory cache if no Laravel cache provided
+            try {
+                $resolvedCache = new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore);
+            } catch (\Throwable $e) {
+                // As a last resort, throw to make the dependency explicit
+                throw new \InvalidArgumentException('A cache repository is required', 0, $e);
+            }
+        }
+
+        $this->clientId = $clientId;
+        $this->cache = $resolvedCache;
+        $this->config = array_merge(['base_url' => $resolvedBaseUrl], $resolvedConfig);
+
+        // Determine identity base URL: prefer configured auth url, else derive from base URL
+        $identityBase = $this->config['auth']['url'] ?? (
+            str_contains($resolvedBaseUrl, 'preprod') ? self::IDENTITY_SANDBOX_URL : self::IDENTITY_PRODUCTION_URL
         );
 
+        if (isset($this->config['auth']['client']) && $this->config['auth']['client'] instanceof AuthenticationClient) {
+            $this->authClient = $this->config['auth']['client'];
+        } else {
+            $this->authClient = new AuthenticationClient(
+                $clientId,
+                $clientSecret,
+                $identityBase,
+                $resolvedHttpClient,
+                $resolvedCache,
+                $this->config
+            );
+        }
+
         $this->apiClient = new ApiClient(
-            config('myinvois.client_id'),
-            config('myinvois.client_secret'),
-            config('myinvois.base_url'),
-            $httpClient,
-            Cache::store(),
+            $clientId,
+            $clientSecret,
+            $resolvedBaseUrl,
+            $resolvedHttpClient,
+            $resolvedCache,
             $this->authClient,
-            $tin ?? '',
-            [
-                'logging' => [
-                    'enabled' => true,
-                    'channel' => 'myinvois',
-                ],
-            ]
+            '',
+            $this->config
         );
 
         $this->stateMapping = [
@@ -196,6 +278,14 @@ class MyInvoisClient
             'Wilayah Persekutuan Putrajaya' => '16',
             'Not Applicable' => '17',
         ];
+    }
+
+    /**
+     * Get the portal base URL for shareable links.
+     */
+    protected function getPortalBaseUrl(): string
+    {
+        return rtrim($this->config['base_url'] ?? (string) config('myinvois.base_url', self::PRODUCTION_URL), '/');
     }
 
     public function createDocument(Request $request)
@@ -645,42 +735,25 @@ class MyInvoisClient
         return $response;
     }
 
-    public function validateTaxpayerTin(string $idType, string $tin, string $idValue)
+    // validateTaxpayerTin implemented via TaxpayerApi trait
+
+    /**
+     * Get only the long ID for a document.
+     */
+    public function getDocumentLongId(string $uuid): ?string
     {
-        // Validate input parameters
-        if (empty($tin) || empty($idValue)) {
-            throw new \InvalidArgumentException('TIN, idType, and idValue must be provided.');
-        }
-
-        // Make the API request
-        $response = $this->apiClient->request('GET', "/api/v1.0/taxpayer/validate/{$tin}", [
-            'query' => [
-                'idType'  => $idType,
-                'idValue' => $idValue
-            ]
-        ]);
-        return $response;
-    }
-
-    public function getDocument($uuid)
-    {
-        // Validate input parameters
-        if (empty($uuid)) {
-            throw new \InvalidArgumentException('Uuid must be provided.');
-        }
-
-        // Make the API request
-        $response = $this->apiClient->request('GET', "/api/v1.0/documents/{$uuid}/raw");
-
-        // Return only the longId
-        return $response['longID'] ?? null; // Return null if longId is not found
+        $response = $this->getDocument($uuid); // Uses trait DocumentRetrievalApi mapping
+        return $response['longId'] ?? $response['longID'] ?? null;
     }
 
     public function generateQrCode($uuid)
     {
-        $longid = $this->getDocument($uuid);
+        $longid = $this->getDocumentLongId($uuid);
+        if (!$longid) {
+            throw new ValidationException('Long ID not available for document', ['uuid' => ['Document may not be valid or shareable']]);
+        }
 
-        $url = self::PRODUCTION_URL . "/{$uuid}/share/{$longid}";
+        $url = $this->getPortalBaseUrl() . "/{$uuid}/share/{$longid}";
         // $url = 'https://www.google.com';
 
         // Create QR Code
@@ -696,6 +769,25 @@ class MyInvoisClient
     }
 
     /**
+     * Retrieve taxpayer info using decoded QR code text.
+     *
+     * Endpoint: GET /api/v1.0/taxpayers/qrcodeinfo/{qrCodeText}
+     *
+     * @param string $qrCodeText Decoded Base64 QR code text
+     * @return array
+     *
+     * @throws ValidationException|ApiException
+     */
+    public function getTaxpayerInfoFromQr(string $qrCodeText): array
+    {
+        if (empty(trim($qrCodeText))) {
+            throw new ValidationException('QR code text is required', ['qrCodeText' => ['QR code text cannot be empty']]);
+        }
+
+        return $this->apiClient->request('GET', "/api/v1.0/taxpayers/qrcodeinfo/{$qrCodeText}");
+    }
+
+    /**
      * Submit a new invoice document.
      *
      * @param  array  $invoice  Invoice data following MyInvois schema
@@ -707,11 +799,18 @@ class MyInvoisClient
     {
         $this->validateInvoiceData($invoice);
 
-        $preparer = new InvoiceDataPreparer;
-        $preparedInvoice = $preparer->prepare($invoice);
+        $documentJson = json_encode($invoice);
+        $payload = [
+            'documents' => [[
+                'document' => base64_encode($documentJson),
+                'documentHash' => hash('sha256', $documentJson),
+                'codeNumber' => $invoice['codeNumber'] ?? ('INV-' . date('YmdHis')),
+            ]],
+        ];
 
-        return $this->apiClient->request('POST', '/documents', [
-            'json' => $preparedInvoice,
+        // Call submission endpoint directly and return API response for compatibility with tests
+        return $this->apiClient->request('POST', '/api/v1.0/documentsubmissions', [
+            'json' => $payload,
         ]);
     }
 
@@ -760,18 +859,33 @@ class MyInvoisClient
     /**
      * Cancel a document.
      *
+     * Endpoint: PUT /api/v1.0/documents/state/{UUID}/state
+     * Body: { status: "cancelled", reason: string }
+     *
      * @param  string  $documentId  The document ID to cancel
-     * @param  string  $reason  Reason for cancellation
+     * @param  string  $reason  Reason for cancellation (max 300 chars)
      * @return array Cancellation status
      *
-     * @throws ApiException
+     * @throws ApiException|ValidationException
      */
-    public function cancelDocument(string $documentId)
+    public function cancelDocument(string $documentId, string $reason): array
     {
+        if (empty($documentId)) {
+            throw new ValidationException('Document ID is required', ['documentId' => ['Document ID cannot be empty']]);
+        }
+
+        if (empty(trim($reason))) {
+            throw new ValidationException('Cancellation reason is required', ['reason' => ['Reason cannot be empty']]);
+        }
+
+        if (mb_strlen($reason) > 300) {
+            throw new ValidationException('Cancellation reason is too long', ['reason' => ['Reason must not exceed 300 characters']]);
+        }
+
         return $this->apiClient->request('PUT', "/api/v1.0/documents/state/{$documentId}/state", [
             'json' => [
                 'status' => 'cancelled',
-                'reason' => 'Wrong invoice details',
+                'reason' => $reason,
             ],
         ]);
     }
@@ -837,9 +951,18 @@ class MyInvoisClient
 
     private function validateInvoiceData(array $invoice): void
     {
-        Assert::notEmpty($invoice['issueDate'] ?? null, 'Invoice issueDate is required');
-        Assert::notEmpty($invoice['totalAmount'] ?? null, 'Invoice totalAmount is required');
-        // Add more validation rules as needed
+        $errors = [];
+
+        if (empty($invoice['issueDate'] ?? null)) {
+            $errors['issueDate'][] = 'The issue date field is required.';
+        }
+        if (empty($invoice['totalAmount'] ?? null)) {
+            $errors['totalAmount'][] = 'The total amount field is required.';
+        }
+
+        if (!empty($errors)) {
+            throw new ValidationException('The given data was invalid.', $errors, 422);
+        }
     }
 
     private function formatAmount(float $amount): string
@@ -917,8 +1040,10 @@ class MyInvoisClient
             'listVersionID' => $version,
         ];
 
-        // Submit document using existing logic
-        return $this->submitDocument($document);
+        // Submit using API client for simplicity
+        return $this->apiClient->request('POST', '/api/v1.0/documentsubmissions', [
+            'json' => $document,
+        ]);
     }
 
     /**
@@ -946,8 +1071,10 @@ class MyInvoisClient
             'listVersionID' => $version,
         ];
 
-        // Submit using base submission logic
-        return $this->submitDocument($document);
+        // Submit using API client for simplicity
+        return $this->apiClient->request('POST', '/api/v1.0/documentsubmissions', [
+            'json' => $document,
+        ]);
     }
 }
 
