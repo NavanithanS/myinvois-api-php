@@ -25,7 +25,7 @@ A robust PHP client library for Malaysia's MyInvois API, providing a clean, type
 
 ## 📋 Requirements
 
--   **PHP**: 7.1 or higher
+-   **PHP**: PHP 8.1+
 -   **Extensions**: JSON, OpenSSL
 -   **Composer**: For dependency management
 
@@ -43,77 +43,66 @@ composer require nava/myinvois
 
 ```php
 <?php
+use Nava\MyInvois\MyInvoisClient;
 
-use Nava\MyInvois\MyInvoisClientFactory;
-
-// Create client instance
-$factory = new MyInvoisClientFactory();
-$client = $factory->production(
-    'your_client_id',
-    'your_client_secret'
+$client = new MyInvoisClient(
+    clientId: 'your_client_id',
+    clientSecret: 'your_client_secret',
+    baseUrl: MyInvoisClient::SANDBOX_URL,
+    cache: new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore),
+    config: [
+        'http' => [
+            // In production set verify => true
+            'verify' => false,
+        ],
+        'logging' => ['enabled' => true, 'channel' => 'stack'],
+    ]
 );
 
-// Submit a document
-$documents = [
-    [
-        'document' => json_encode([
-            'invoiceNumber' => 'INV-001',
-            'issueDate' => '2024-01-01',
-            'totalAmount' => 1000.00,
-            // ... additional document fields
-        ]),
-        'documentHash' => hash('sha256', $documentContent),
-        'codeNumber' => 'INV-001',
-    ]
+// Submit an invoice (convenience method)
+$invoice = [
+    'issueDate' => '2024-01-01',
+    'totalAmount' => 1000.00,
+    'items' => [[
+        'description' => 'Service', 'quantity' => 1, 'unitPrice' => 1000.00, 'taxAmount' => 0
+    ]],
 ];
 
-$response = $client->submitDocuments($documents);
-
-// Check submission status
-$status = $client->getSubmissionStatus($response['submissionUID']);
+$resp = $client->submitInvoice($invoice);
+$status = $client->getSubmissionStatus($resp['submissionUID']);
 ```
 
-### Environment Selection
+### Environment selection
 
 ```php
-// Production environment
-$client = $factory->production($clientId, $clientSecret);
+// Use SANDBOX_URL for testing, PRODUCTION_URL for production
+$client = new MyInvoisClient($id, $secret, MyInvoisClient::PRODUCTION_URL, $cache);
 
-// Sandbox environment (for testing)
-$client = $factory->sandbox($clientId, $clientSecret);
-
-// Intermediary mode (for service providers)
-$client = $factory->intermediary($clientId, $clientSecret, $taxpayerTin);
+// Intermediary (service providers)
+$client->onBehalfOf('C1234567890'); // set taxpayer TIN
 ```
 
 ## 🔧 Configuration
 
-### Standalone Configuration
+### Standalone
 
 ```php
-$factory = new MyInvoisClientFactory();
-$client = $factory->make(
+use Nava\MyInvois\MyInvoisClient;
+
+$client = new MyInvoisClient(
     clientId: 'your_client_id',
     clientSecret: 'your_client_secret',
     baseUrl: 'https://preprod.myinvois.hasil.gov.my',
-    httpClient: null, // Optional custom Guzzle client
-    options: [
-        'cache' => [
-            'enabled' => true,
-            'ttl' => 3600
-        ],
-        'logging' => [
-            'enabled' => true,
-            'channel' => 'myinvois'
-        ],
+    cache: new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore),
+    config: [
+        'cache' => ['enabled' => true, 'ttl' => 3600],
+        'logging' => ['enabled' => true, 'channel' => 'myinvois'],
         'http' => [
             'timeout' => 30,
             'connect_timeout' => 10,
-            'retry' => [
-                'times' => 3,
-                'sleep' => 1000
-            ]
-        ]
+            'retry' => ['times' => 3, 'sleep' => 1000],
+            'verify' => false, // set true in production
+        ],
     ]
 );
 ```
@@ -152,7 +141,8 @@ MYINVOIS_CLIENT_SECRET=your_client_secret
 
 # Environment URLs
 MYINVOIS_BASE_URL=https://preprod.myinvois.hasil.gov.my
-MYINVOIS_AUTH_URL=https://preprod.myinvois.hasil.gov.my
+MYINVOIS_AUTH_URL=https://preprod-api.myinvois.hasil.gov.my
+# Optional: pin a CA/cert for TLS
 
 # Certificate paths (if required)
 MYINVOIS_SSLCERT_PATH=/path/to/ssl/cert.pem
@@ -215,31 +205,39 @@ $documents = [
         'codeNumber' => 'INV-002',
     ]
 ];
-
 $response = $client->submitDocuments($documents);
 
 // Get document by UUID
 $document = $client->getDocument('ABC12345DEFGHI');
 
-// Search documents
+// Search documents (use submissionDate* or issueDate*)
 $searchResults = $client->searchDocuments([
-    'dateFrom' => '2024-01-01',
-    'dateTo' => '2024-01-31',
-    'status' => 'Valid'
+  'submissionDateFrom' => '2024-01-01T00:00:00Z',
+  'submissionDateTo' => '2024-01-31T23:59:59Z',
+  'status' => 'Valid',
+  'pageSize' => 50,
+  'pageNo' => 1,
 ]);
 
-// Generate QR code for document
+// Or by issue date
+// $searchResults = $client->searchDocuments([
+//   'issueDateFrom' => '2024-01-01T00:00:00Z',
+//   'issueDateTo' => '2024-01-31T23:59:59Z',
+// ]);
+
+// Generate QR code for a document (returns data URI string)
 $qrCode = $client->generateQrCode('ABC12345DEFGHI');
+// e.g., <img src="$qrCode" alt="QR" />
 ```
 
 ### Taxpayer Operations
 
 ```php
-// Validate taxpayer TIN
-$isValid = $client->validateTaxpayerTin('NRIC', 'C1234567890', 'IC12345678');
+// Validate TIN (idType case‑insensitive)
+$isValid = $client->validateTaxpayerTin('C1234567890', 'nric', '770625015324');
 
 // Get taxpayer TIN information
-$tinInfo = $client->getTaxpayerTin('NRIC', 'IC12345678');
+$tinInfo = $client->getTaxpayerTin('NRIC', '201901234567');
 ```
 
 ### Error Handling
@@ -272,42 +270,25 @@ try {
 $documentTypes = $client->getDocumentTypes();
 
 // Get document type versions
-$versions = $client->getDocumentTypeVersions('Invoice');
+$version = $client->findDocumentTypeVersion(45, 2.0);
 
 // Get specific version details
 $versionDetails = $client->getDocumentTypeVersionDetails('Invoice', '1.0');
 ```
 
-## 🧪 Testing
-
-### Running Tests
+## 🧪 Testing & Quality
 
 ```bash
-# Run all tests
+# Tests
 composer test
 
-# Run specific test file
-vendor/bin/phpunit tests/Feature/DocumentSubmissionApiTest.php
-
-# Run with coverage
+# Coverage
 vendor/bin/phpunit --coverage-html build/coverage
-```
 
-### Code Quality
-
-```bash
-# Static analysis
+# Static analysis & formatting
 composer analyse
-
-# Code formatting
 composer format
 ```
-
-### Test Structure
-
--   `tests/Feature/` - Integration tests for API operations
--   `tests/Unit/` - Unit tests for individual components
--   `tests/Laravel/` - Laravel-specific integration tests
 
 ## 🏗️ Architecture
 
@@ -315,10 +296,10 @@ composer format
 
 -   **MyInvoisClient** - Main client orchestrating all operations
 -   **MyInvoisClientFactory** - Factory for environment-specific clients
--   **API Classes** - Specialized classes for different API endpoints
--   **Authentication** - OAuth2 implementation with token management
+-   **API Classes** - Document operations, taxpayer, notifications, etc.
+-   **Authentication** - OAuth2 with token cache/refresh
 -   **Validation** - Comprehensive input validation system
--   **Exception Handling** - Typed exceptions for different error scenarios
+-   **Exception Handling** - `ValidationException`, `AuthenticationException`, `ApiException`
 
 ### Supported Operations
 
@@ -331,6 +312,227 @@ composer format
 | Taxpayer Operations | Validate and retrieve TIN information |
 | Notifications       | Manage system notifications           |
 | Status Tracking     | Monitor submission status             |
+
+## 📖 Documentation
+
+The essentials are embedded here for convenience.
+
+### Quickstart
+
+Create a client
+
+```php
+use Nava\MyInvois\MyInvoisClient;
+
+$client = new MyInvoisClient(
+    clientId: getenv('MYINVOIS_CLIENT_ID') ?: 'your_client_id',
+    clientSecret: getenv('MYINVOIS_CLIENT_SECRET') ?: 'your_client_secret',
+    baseUrl: MyInvoisClient::SANDBOX_URL,
+    cache: new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore),
+    config: [
+        'logging' => ['enabled' => true, 'channel' => 'stack'],
+    ]
+);
+```
+
+Check API status
+
+```php
+$status = $client->getApiStatus();
+var_dump($status);
+```
+
+Submit an invoice (JSON)
+
+```php
+$invoice = [
+    'issueDate' => date('Y-m-d'),
+    'totalAmount' => 100.50,
+    'items' => [
+        ['description' => 'Service', 'quantity' => 1, 'unitPrice' => 100.50, 'taxAmount' => 0],
+    ],
+];
+
+$resp = $client->submitInvoice($invoice);
+echo $resp['documentId'] ?? '';
+```
+
+Handle errors
+
+```php
+try {
+    $client->listDocuments(['page' => 1]);
+} catch (\Nava\MyInvois\Exception\ValidationException $e) {
+    // input errors
+} catch (\Nava\MyInvois\Exception\ApiException $e) {
+    // remote errors
+}
+```
+
+### Authentication
+
+Tokens are obtained from the identity service and cached. Refresh happens automatically.
+
+```php
+use Nava\MyInvois\MyInvoisClient;
+
+$client = new MyInvoisClient(
+    clientId: 'your_client_id',
+    clientSecret: 'your_client_secret',
+    baseUrl: MyInvoisClient::SANDBOX_URL,
+    cache: new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore)
+);
+```
+
+Intermediary (on behalf of)
+
+```php
+use Nava\MyInvois\Auth\IntermediaryAuthenticationClient;
+
+// If you need intermediary semantics, inject an IntermediaryAuthenticationClient
+// in config['auth']['client'] and call:
+$client->onBehalfOf('C1234567890');
+$client->authenticate();
+```
+
+Notes
+
+-   Retries on 429/5xx with exponential backoff
+-   Default headers include `Authorization: Bearer <token>` and `Accept: application/json`
+
+### Document Submission
+
+Single invoice (JSON)
+
+```php
+$invoice = [
+  'issueDate' => '2024-11-12',
+  'totalAmount' => 1000.50,
+  'items' => [ ['description' => 'Item', 'quantity' => 1, 'unitPrice' => 1000.50, 'taxAmount' => 60.03] ],
+];
+$resp = $client->submitInvoice($invoice);
+```
+
+Cancel a document
+
+```php
+$client->cancelDocument('DOC123', 'Wrong information');
+```
+
+Handling validation
+
+```php
+try {
+  $client->submitInvoice([]);
+} catch (\Nava\MyInvois\Exception\ValidationException $e) {
+  // $e->getMessage() and $e->getErrors()
+}
+```
+
+Versioned notes
+
+```php
+$client->submitRefundNote(['invoiceNumber' => 'RN-001', 'issueDate' => '2024-01-01'], '1.1');
+```
+
+### Search
+
+Basic filters
+
+```php
+$filters = [
+  'submissionDateFrom' => '2024-01-01T00:00:00Z',
+  'submissionDateTo' => '2024-01-31T23:59:59Z',
+  'status' => 'Valid',
+  'pageSize' => 50,
+  'pageNo' => 1,
+];
+$result = $client->searchDocuments($filters);
+```
+
+Result mapping
+
+```php
+/** @var \Nava\MyInvois\Data\DocumentSearchResult $doc */
+$doc = $result['documents'][0];
+echo $doc->uuid; // string
+echo $doc->getStatus()->value; // Valid
+```
+
+Errors
+
+```php
+try { $client->searchDocuments(['pageSize' => 101]); }
+catch (\Nava\MyInvois\Exception\ValidationException $e) { /* invalid page size */ }
+```
+
+### Recent Documents
+
+Get recent documents
+
+```php
+$result = $client->getRecentDocuments([
+  'submissionDateFrom' => '2024-01-01T00:00:00Z',
+  'submissionDateTo' => '2024-01-31T23:59:59Z',
+  'pageNo' => 1,
+  'pageSize' => 10,
+]);
+```
+
+Validation
+
+-   Page size between 1 and 100
+-   Invoice direction: Sent or Received
+-   Status must be a valid value (e.g., Valid, Invalid)
+-   ID types: NRIC, PASSPORT, BRN, ARMY
+
+### Notifications
+
+List notifications
+
+```php
+$resp = $client->getNotifications([
+  'dateFrom' => '2024-01-01T00:00:00Z',
+  'dateTo' => '2024-01-31T23:59:59Z',
+  'type' => 6, // DOCUMENT_RECEIVED
+  'language' => 'en',
+  'status' => 4, // DELIVERED
+  'pageNo' => 1,
+  'pageSize' => 50,
+]);
+```
+
+Parse a notification DTO
+
+```php
+$n = \Nava\MyInvois\Data\Notification::fromArray($resp['result'][0]);
+if ($n->isDelivered()) {
+  // handle delivered
+}
+```
+
+### Taxpayer Validation
+
+Validate a TIN with secondary ID
+
+```php
+try {
+  $ok = $client->validateTaxpayerTin('C1234567890', 'NRIC', '770625015324');
+  if ($ok) { /* valid */ }
+} catch (\Nava\MyInvois\Exception\ValidationException $e) {
+  // input errors, e.g., invalid TIN or ID format
+}
+```
+
+Case-insensitive ID type
+
+```php
+$client->validateTaxpayerTin('C1234567890', 'passport', 'A12345678');
+```
+
+Rate limiting
+
+-   Results are cached by default; set a custom cache repository in the constructor if needed
 
 ## 🤝 Contributing
 
