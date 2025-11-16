@@ -15,6 +15,7 @@ use Nava\MyInvois\Api\DocumentTypeVersionsApi;
 use Nava\MyInvois\Api\NotificationsApi;
 use Nava\MyInvois\Api\RecentDocumentsApi;
 use Nava\MyInvois\Api\SubmissionStatusApi;
+use Nava\MyInvois\Api\IntermediaryApi;
 use Nava\MyInvois\Api\TaxpayerApi;
 use Nava\MyInvois\Auth\AuthenticationClient;
 use Nava\MyInvois\Exception\ApiException;
@@ -61,6 +62,7 @@ class MyInvoisClient
     use NotificationsApi;
     use RecentDocumentsApi;
     use SubmissionStatusApi;
+    use IntermediaryApi;
 
     private $authClient;
     private $apiClient;
@@ -107,20 +109,8 @@ class MyInvoisClient
     private $clientId;
     private $config = [];
 
-    // use DateValidationTrait;
-    // use DocumentDetailsApi;
-    // use DocumentRejectionApi;
-    // use DocumentRetrievalApi;
-    // use DocumentSearchApi;
-    // use DocumentSubmissionApi;
-    // use DocumentTypesApi;
-    // use DocumentTypeVersionsApi;
-    // use LoggerTrait;
-    // use NotificationsApi;
-    // use RecentDocumentsApi;
-    // use SubmissionStatusApi;
+    use IntermediaryApi;
     use TaxpayerApi;
-    // use UuidValidationTrait;
 
     public const PRODUCTION_URL = 'https://myinvois.hasil.gov.my';
 
