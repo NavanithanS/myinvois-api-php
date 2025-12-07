@@ -66,6 +66,16 @@ class ApiClient
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
             ];
+
+            // Inject headers from auth client (e.g. onbehalfof)
+            if (method_exists($this->authClient, 'getAuthRequestHeaders')) {
+                $authHeaders = $this->authClient->getAuthRequestHeaders();
+                // Filter out Authorization header if present to avoid conflict/duplication
+                if (isset($authHeaders['Authorization'])) {
+                    unset($authHeaders['Authorization']);
+                }
+                $defaultHeaders = array_merge($defaultHeaders, $authHeaders);
+            }
             $options['headers'] = array_merge($defaultHeaders, $options['headers'] ?? []);
 
             $this->logRequest($method, $endpoint, $options);
@@ -103,6 +113,16 @@ class ApiClient
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
             ];
+
+            // Inject headers from auth client (e.g. onbehalfof)
+            if (method_exists($this->authClient, 'getAuthRequestHeaders')) {
+                $authHeaders = $this->authClient->getAuthRequestHeaders();
+                // Filter out Authorization header if present to avoid conflict/duplication
+                if (isset($authHeaders['Authorization'])) {
+                    unset($authHeaders['Authorization']);
+                }
+                $defaultHeaders = array_merge($defaultHeaders, $authHeaders);
+            }
             $options['headers'] = array_merge($defaultHeaders, $options['headers'] ?? []);
 
             $this->logRequest($method, $endpoint, $options);
