@@ -78,6 +78,11 @@ class ApiClient
             }
             $options['headers'] = array_merge($defaultHeaders, $options['headers'] ?? []);
 
+            \Illuminate\Support\Facades\Log::info('ApiClient Request Headers', [
+                'endpoint' => $endpoint,
+                'headers' => $options['headers']
+            ]);
+
             $this->logRequest($method, $endpoint, $options);
 
             $response = $this->httpClient->request($method, $this->baseUrl . $endpoint, $options);
@@ -124,6 +129,11 @@ class ApiClient
                 $defaultHeaders = array_merge($defaultHeaders, $authHeaders);
             }
             $options['headers'] = array_merge($defaultHeaders, $options['headers'] ?? []);
+
+            \Illuminate\Support\Facades\Log::info('ApiClient Request Headers', [
+                'endpoint' => $endpoint,
+                'headers' => $options['headers']
+            ]);
 
             $this->logRequest($method, $endpoint, $options);
 
