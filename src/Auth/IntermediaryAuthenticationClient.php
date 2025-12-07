@@ -18,7 +18,7 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
 
     protected const TOKEN_CACHE_PREFIX = 'myinvois_intermediary_token_';
 
-    protected const TIN_PATTERN = '/^C\d{10}$/';
+    protected const TIN_PATTERN = '/^C\d{10,12}$/';
 
     protected const TOKEN_REFRESH_BUFFER = 300; // 5 minutes before expiry
 
