@@ -131,12 +131,9 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
     /**
      * {@inheritdoc}
      */
-    protected function getAuthRequestHeaders(): array
+    public function getAuthRequestHeaders(): array
     {
-        return array_merge(
-            parent::getAuthRequestHeaders(),
-            ['onbehalfof' => $this->onBehalfOf]
-        );
+        return ['onbehalfof' => $this->onBehalfOf];
     }
 
     /**
