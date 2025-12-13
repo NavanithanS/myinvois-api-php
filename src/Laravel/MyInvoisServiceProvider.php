@@ -19,7 +19,7 @@ class MyInvoisServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(
-            __DIR__.'/../../config/myinvois.php',
+            __DIR__ . '/../../config/myinvois.php',
             'myinvois'
         );
 
@@ -56,12 +56,8 @@ class MyInvoisServiceProvider extends ServiceProvider
     {
         if ($this->app->runningInConsole()) {
             $this->publishes([
-                __DIR__.'/../../config/myinvois.php' => config_path('myinvois.php'),
+                __DIR__ . '/../../config/myinvois.php' => config_path('myinvois.php'),
             ], 'myinvois-config');
-
-            // Ensure default placeholders are reflected in config for publish test
-            $this->app['config']->set('myinvois.client_id', 'your_client_id');
-            $this->app['config']->set('myinvois.client_secret', 'your_client_secret');
         }
     }
 
@@ -88,7 +84,7 @@ class MyInvoisServiceProvider extends ServiceProvider
                 Cache::store(),
                 $this->getAuthConfig($config)
             );
-            
+
         });
 
         // Register Intermediary Authentication Client
