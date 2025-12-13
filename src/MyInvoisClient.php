@@ -280,8 +280,8 @@ class MyInvoisClient
 
     public function createDocument(Request $request)
     {
-        $this->totalPay = (float)$request->input('total_amount');
-        $this->invoiceNo = (string)$request->input('invoice_no');
+        $this->totalPay = (float) $request->input('total_amount');
+        $this->invoiceNo = (string) $request->input('invoice_no');
         $this->dateFrom = $request->input('date_from');
         $this->dateTo = $request->input('date_to');
         $this->buyerIdType = $request->input('buyerIdType');
@@ -294,7 +294,7 @@ class MyInvoisClient
         $this->buyerAddress2 = $request->input('buyerAddress2');
         $this->buyerPostcode = $request->input('buyerPostcode');
         $this->buyerCity = $request->input('buyerCity');
-        $this->buyerStateCode = $this->stateMapping[$request->input('buyerState')] ?? null;
+        $this->buyerStateCode = $this->stateMapping[$request->input('buyerState')] ?? '17';
         $this->supplierIdType = $request->input('supplierIdType');
         $this->supplierTIN = $request->input('supplierTIN');
         $this->supplierIC = $request->input('supplierIC');
@@ -306,7 +306,7 @@ class MyInvoisClient
         $this->supplierAddress2 = $request->input('supplierAddress2');
         $this->supplierPostcode = $request->input('supplierPostcode');
         $this->supplierCity = $request->input('supplierCity');
-        $this->supplierStateCode = $this->stateMapping[$request->input('supplierState')] ?? null;
+        $this->supplierStateCode = $this->stateMapping[$request->input('supplierState')] ?? '17';
 
         $this->utcTime = Carbon::now('UTC')->toTimeString() . "Z";
         $authResponse = $this->authClient->authenticate($this->supplierTIN);
@@ -342,8 +342,8 @@ class MyInvoisClient
 
         $subject = $certInfo['issuer'];
         $certCN = $subject['CN'];
-        $certO  = $subject['O'];
-        $certC  = $subject['C'];
+        $certO = $subject['O'];
+        $certC = $subject['C'];
         $issuerName = "CN={$certCN}, O={$certO}, C={$certC}";
 
         // Get the certificate in DER format
@@ -694,7 +694,7 @@ class MyInvoisClient
             'listVersionID' => $version,
         ];
 
-        $response =  $this->apiClient->request('POST', '/api/v1.0/documentsubmissions', [
+        $response = $this->apiClient->request('POST', '/api/v1.0/documentsubmissions', [
             'json' => $requestData,
             'authResponse' => json_encode($authResponse, true),
         ]);
@@ -791,11 +791,13 @@ class MyInvoisClient
 
         $documentJson = json_encode($invoice);
         $payload = [
-            'documents' => [[
-                'document' => base64_encode($documentJson),
-                'documentHash' => hash('sha256', $documentJson),
-                'codeNumber' => $invoice['codeNumber'] ?? ('INV-' . date('YmdHis')),
-            ]],
+            'documents' => [
+                [
+                    'document' => base64_encode($documentJson),
+                    'documentHash' => hash('sha256', $documentJson),
+                    'codeNumber' => $invoice['codeNumber'] ?? ('INV-' . date('YmdHis')),
+                ]
+            ],
         ];
 
         // Call submission endpoint directly and return API response for compatibility with tests
@@ -1020,7 +1022,7 @@ class MyInvoisClient
         $version = $version ?? Config::DEBIT_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (! in_array($version, Config::DEBIT_NOTE_SUPPORTED_VERSIONS)) {
+        if (!in_array($version, Config::DEBIT_NOTE_SUPPORTED_VERSIONS)) {
             throw new ValidationException('Unsupported debit note version');
         }
 
@@ -1051,7 +1053,7 @@ class MyInvoisClient
         $version = $version ?? Config::REFUND_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (! Config::isVersionSupported('refund_note', $version)) {
+        if (!Config::isVersionSupported('refund_note', $version)) {
             throw new ValidationException('Unsupported refund note version');
         }
 
