@@ -18,7 +18,7 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
 
     protected const TOKEN_CACHE_PREFIX = 'myinvois_intermediary_token_';
 
-    protected const TIN_PATTERN = '/^C\d{10,12}$/';
+    protected const TIN_PATTERN = '/^(C\d{10,12}|IG\d{11,12}|\d{12})$/';
 
     protected const TOKEN_REFRESH_BUFFER = 300; // 5 minutes before expiry
 
@@ -61,7 +61,7 @@ class IntermediaryAuthenticationClient extends AuthenticationClient implements I
             $this->logError('Invalid TIN format provided', ['tin' => $tin]);
             throw new ValidationException(
                 'Invalid TIN format',
-                ['tin' => ['TIN must start with C followed by 10 digits']]
+                ['tin' => ['TIN must be C + 10-12 digits, IG + 11-12 digits, or 12-digit NRIC']]
             );
         }
 

@@ -22,8 +22,8 @@ class AuthenticationClient implements AuthenticationClientInterface
     use LoggerTrait;
     use RateLimitingTrait;
 
-    // Tests expect OAuth token endpoint at /oauth/token
-    protected const TOKEN_ENDPOINT = '/oauth/token';
+    // MyInvois Identity Server uses OpenID Connect endpoint
+    protected const TOKEN_ENDPOINT = '/connect/token';
 
     protected const DEFAULT_SCOPE = 'InvoicingAPI';
 
@@ -135,8 +135,7 @@ class AuthenticationClient implements AuthenticationClientInterface
             // Only include 'onbehalfof' header if $tin is explicitly passed
             if (!empty($tin)) {
                 $headers['onbehalfof'] = $tin;
-            }
-            else {
+            } else {
                 $tin = config('myinvois.tin');
             }
 
@@ -144,11 +143,11 @@ class AuthenticationClient implements AuthenticationClientInterface
             $response = $this->httpClient->post($this->getTokenUrl(), [
                 'headers' => $headers,
                 'form_params' => [
-                    'grant_type' => 'client_credentials',
-                    'client_id' => $this->clientId,
-                    'client_secret' => $this->clientSecret,
-                    'scope' => self::DEFAULT_SCOPE,
-                ],
+                        'grant_type' => 'client_credentials',
+                        'client_id' => $this->clientId,
+                        'client_secret' => $this->clientSecret,
+                        'scope' => self::DEFAULT_SCOPE,
+                    ],
                 'connect_timeout' => $this->config['http']['connect_timeout'],
                 'timeout' => $this->config['http']['timeout'],
                 'http_errors' => true,
@@ -441,6 +440,6 @@ class AuthenticationClient implements AuthenticationClientInterface
     private function shouldRefreshToken(): bool
     {
         return $this->tokenExpires &&
-            (($this->tokenExpires - time()) < self::TOKEN_REFRESH_BUFFER * 2);
+        (($this->tokenExpires - time()) < self::TOKEN_REFRESH_BUFFER * 2);
     }
 }

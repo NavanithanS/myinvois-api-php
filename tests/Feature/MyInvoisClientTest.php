@@ -76,7 +76,7 @@ class MyInvoisClientTest extends TestCase
         // Assert the authentication request was made
         $request = $this->container[0]['request'];
         $this->assertEquals('POST', $request->getMethod());
-        $this->assertStringContainsString('/oauth/token', $request->getUri()->getPath());
+        $this->assertStringContainsString('/connect/token', $request->getUri()->getPath());
 
         // Verify token was used in subsequent request
         $apiRequest = $this->container[1]['request'];
