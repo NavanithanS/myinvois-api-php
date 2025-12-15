@@ -468,40 +468,7 @@ class MyInvoisClient
                             "PayableAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]]
                         ]
                     ],
-                    "InvoiceLine" => [
-                        [
-                            "ID" => [["_" => $this->invoiceNo]],
-                            "InvoicedQuantity" => [["_" => 1]],
-                            "LineExtensionAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]],
-                            "TaxTotal" => [
-                                [
-                                    "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                    "TaxSubtotal" => [
-                                        [
-                                            "TaxableAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                            "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                            "Percent" => [["_" => 0]],
-                                            "TaxCategory" => [
-                                                ["ID" => [["_" => "06"]], "TaxExemptionReason" => [["_" => ""]], "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]]
-                                            ]
-                                        ]
-                                    ]
-                                ]
-                            ],
-                            "Item" => [
-                                [
-                                    "CommodityClassification" => [["ItemClassificationCode" => [["_" => "022", "listID" => "CLASS"]]]],
-                                    "Description" => [["_" => "Electricity Charge"]]
-                                ]
-                            ],
-                            "Price" => [
-                                ["PriceAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]]]
-                            ],
-                            "ItemPriceExtension" => [
-                                ["Amount" => [["_" => $this->totalPay, "currencyID" => "MYR"]]]
-                            ]
-                        ]
-                    ]
+                    "InvoiceLine" => $this->buildInvoiceLines($request)
                 ]
             ]
         ];
@@ -985,6 +952,142 @@ class MyInvoisClient
                 'taxAmount' => $this->formatAmount($item['taxAmount'] ?? 0),
             ];
         }, $items);
+    }
+
+    /**
+     * Build InvoiceLine array for UBL document.
+     *
+     * Supports dynamic line items when 'lineItems' is provided in request.
+     * Falls back to legacy single-item behavior for backwards compatibility.
+     *
+     * @param Request $request The incoming request with optional lineItems
+     * @return array UBL-compliant InvoiceLine array
+     */
+    private function buildInvoiceLines(Request $request): array
+    {
+        $lineItems = $request->input('lineItems', []);
+
+        // Fallback: Original behavior for backwards compatibility
+        if (empty($lineItems)) {
+            return [
+                [
+                    "ID" => [["_" => $this->invoiceNo]],
+                    "InvoicedQuantity" => [["_" => 1]],
+                    "LineExtensionAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]],
+                    "TaxTotal" => [
+                        [
+                            "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
+                            "TaxSubtotal" => [
+                                [
+                                    "TaxableAmount" => [["_" => 0, "currencyID" => "MYR"]],
+                                    "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
+                                    "Percent" => [["_" => 0]],
+                                    "TaxCategory" => [
+                                        ["ID" => [["_" => "06"]], "TaxExemptionReason" => [["_" => ""]], "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ],
+                    "Item" => [
+                        [
+                            "CommodityClassification" => [["ItemClassificationCode" => [["_" => "022", "listID" => "CLASS"]]]],
+                            "Description" => [["_" => "Electricity Charge"]]
+                        ]
+                    ],
+                    "Price" => [
+                        ["PriceAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]]]
+                    ],
+                    "ItemPriceExtension" => [
+                        ["Amount" => [["_" => $this->totalPay, "currencyID" => "MYR"]]]
+                    ]
+                ]
+            ];
+        }
+
+        // Build dynamic line items from request data
+        $invoiceLines = [];
+        foreach ($lineItems as $index => $item) {
+            $lineId = str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT);
+            $quantity = (float) ($item['quantity'] ?? 1);
+            $unitPrice = (float) ($item['unitPrice'] ?? 0);
+            $taxRate = (float) ($item['taxRate'] ?? 0);
+            $taxAmount = (float) ($item['taxAmount'] ?? 0);
+            $subtotal = (float) ($item['subtotal'] ?? ($quantity * $unitPrice));
+            $lineTotal = (float) ($item['total'] ?? $subtotal);
+            $description = $item['description'] ?? 'Item';
+            $classificationCode = $item['classificationCode'] ?? '022';
+
+            // Determine tax category based on tax rate
+            $taxCategoryId = $this->getTaxCategoryId($taxRate);
+
+            $invoiceLines[] = [
+                "ID" => [["_" => $lineId]],
+                "InvoicedQuantity" => [["_" => $quantity, "unitCode" => "C62"]],
+                "LineExtensionAmount" => [["_" => $subtotal, "currencyID" => "MYR"]],
+                "TaxTotal" => [
+                    [
+                        "TaxAmount" => [["_" => $taxAmount, "currencyID" => "MYR"]],
+                        "TaxSubtotal" => [
+                            [
+                                "TaxableAmount" => [["_" => $subtotal, "currencyID" => "MYR"]],
+                                "TaxAmount" => [["_" => $taxAmount, "currencyID" => "MYR"]],
+                                "Percent" => [["_" => $taxRate]],
+                                "TaxCategory" => [
+                                    [
+                                        "ID" => [["_" => $taxCategoryId]],
+                                        "TaxExemptionReason" => [["_" => ""]],
+                                        "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                "Item" => [
+                    [
+                        "CommodityClassification" => [["ItemClassificationCode" => [["_" => $classificationCode, "listID" => "CLASS"]]]],
+                        "Description" => [["_" => $description]]
+                    ]
+                ],
+                "Price" => [
+                    ["PriceAmount" => [["_" => $unitPrice, "currencyID" => "MYR"]]]
+                ],
+                "ItemPriceExtension" => [
+                    ["Amount" => [["_" => $lineTotal, "currencyID" => "MYR"]]]
+                ]
+            ];
+        }
+
+        return $invoiceLines;
+    }
+
+    /**
+     * Get tax category ID based on tax rate.
+     *
+     * @param float $taxRate The tax rate percentage
+     * @return string The tax category ID
+     */
+    private function getTaxCategoryId(float $taxRate): string
+    {
+        // MyInvois tax category codes
+        // 01 = Sales Tax (10%)
+        // 02 = Service Tax (8%)
+        // 03 = Tourism Tax
+        // 04 = High-Value Goods Tax
+        // 05 = Sales Tax on Low Value Goods
+        // 06 = Exempt (0%)
+        // E = Exempt with reason
+
+        if ($taxRate <= 0) {
+            return "06"; // Exempt
+        } elseif ($taxRate == 6) {
+            return "02"; // Service Tax (6% - adjusted from old 8%)
+        } elseif ($taxRate == 10) {
+            return "01"; // Sales Tax
+        }
+
+        return "01"; // Default to Sales Tax
     }
 
     /**
