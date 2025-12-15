@@ -103,6 +103,8 @@ class MyInvoisClient
     private $client;
     private $buyerIdType;
     private $supplierIdType;
+    private $supplierMsicCode;
+    private $supplierMsicDescription;
     private $x509cert;
 
     protected $cache;
@@ -307,6 +309,8 @@ class MyInvoisClient
         $this->supplierPostcode = $request->input('supplierPostcode');
         $this->supplierCity = $request->input('supplierCity');
         $this->supplierStateCode = $this->stateMapping[$request->input('supplierState')] ?? '17';
+        $this->supplierMsicCode = $request->input('supplierMsicCode') ?: '68109';
+        $this->supplierMsicDescription = $request->input('supplierMsicDescription') ?: 'Real estate activities with own or leased property n.e.c.';
 
         $this->utcTime = Carbon::now('UTC')->toTimeString() . "Z";
         $authResponse = $this->authClient->authenticate($this->supplierTIN);
@@ -386,7 +390,7 @@ class MyInvoisClient
                         [
                             "Party" => [
                                 [
-                                    "IndustryClassificationCode" => [["_" => "68109", "name" => "Real estate activities with own or leased property n.e.c."]],
+                                    "IndustryClassificationCode" => [["_" => $this->supplierMsicCode, "name" => $this->supplierMsicDescription]],
                                     "PartyIdentification" => [
                                         ["ID" => [["_" => $this->supplierTIN, "schemeID" => "TIN"]]],
                                         ["ID" => [["_" => $this->supplierIC, "schemeID" => $this->supplierIdType]]],
