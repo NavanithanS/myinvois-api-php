@@ -447,6 +447,7 @@ class MyInvoisClient
                             ]
                         ]
                     ],
+                    "AllowanceCharge" => $this->buildAllowanceCharges($request),
                     "TaxTotal" => [
                         [
                             "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
@@ -1088,6 +1089,51 @@ class MyInvoisClient
         }
 
         return "01"; // Default to Sales Tax
+    }
+
+    /**
+     * Build AllowanceCharge array for UBL document.
+     *
+     * Supports dynamic allowances/charges (including trade-in items).
+     * Falls back to default structure for backwards compatibility.
+     *
+     * @param Request $request The incoming request with optional allowanceCharges
+     * @return array UBL-compliant AllowanceCharge array
+     */
+    private function buildAllowanceCharges(Request $request): array
+    {
+        $allowanceCharges = $request->input('allowanceCharges', []);
+
+        // Build from provided data if available
+        if (!empty($allowanceCharges)) {
+            $charges = [];
+            foreach ($allowanceCharges as $charge) {
+                $isCharge = $charge['chargeIndicator'] ?? false;
+                $reason = $charge['allowanceChargeReason'] ?? ($charge['reason'] ?? '');
+                $amount = (float) ($charge['amount'] ?? 0);
+
+                $charges[] = [
+                    "ChargeIndicator" => [["_" => $isCharge]],
+                    "AllowanceChargeReason" => [["_" => $reason]],
+                    "Amount" => [["_" => $amount, "currencyID" => "MYR"]]
+                ];
+            }
+            return $charges;
+        }
+
+        // Fallback: Default empty allowance/charge structure (per SDK sample)
+        return [
+            [
+                "ChargeIndicator" => [["_" => false]],
+                "AllowanceChargeReason" => [["_" => ""]],
+                "Amount" => [["_" => 0.00, "currencyID" => "MYR"]]
+            ],
+            [
+                "ChargeIndicator" => [["_" => true]],
+                "AllowanceChargeReason" => [["_" => ""]],
+                "Amount" => [["_" => 0.00, "currencyID" => "MYR"]]
+            ]
+        ];
     }
 
     /**
