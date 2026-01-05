@@ -143,8 +143,12 @@ trait TaxpayerApi
      */
     private function validateTinFormat(string $tin): void
     {
-        if ($tin === '' || $tin === null || strlen($tin) !== 11 || ! preg_match('/^C\d{10}$/', $tin)) {
-            throw new ValidationException('Invalid TIN format', ['tin' => ['TIN must start with C followed by exactly 10 digits']], 422);
+        if ($tin === '' || $tin === null) {
+            throw new ValidationException('Invalid TIN format', ['tin' => ['TIN cannot be empty']], 422);
+        }
+
+        if (!preg_match('/^(C\d{10}|IG\d{10,12}|\d{12})$/', $tin)) {
+            throw new ValidationException('Invalid TIN format', ['tin' => ['TIN must be 12 digits, C + 10 digits (Company), or IG + 10-12 digits (Individual)']], 422);
         }
     }
 
@@ -161,10 +165,10 @@ trait TaxpayerApi
 
         $normalizedType = strtoupper(trim($idType));
 
-        if (! in_array($normalizedType, self::VALID_ID_TYPES, true)) {
+        if (!in_array($normalizedType, self::VALID_ID_TYPES, true)) {
             throw new ValidationException(
                 'Invalid ID type',
-                ['idType' => ['ID type must be one of: '.implode(', ', self::VALID_ID_TYPES)]],
+                ['idType' => ['ID type must be one of: ' . implode(', ', self::VALID_ID_TYPES)]],
                 422
             );
         }
@@ -184,7 +188,7 @@ trait TaxpayerApi
         $normalizedType = strtoupper($idType);
         $pattern = self::ID_PATTERNS[$normalizedType] ?? null;
 
-        if (! $pattern || ! preg_match($pattern, $idValue)) {
+        if (!$pattern || !preg_match($pattern, $idValue)) {
             $errorMessages = [
                 'NRIC' => 'NRIC must be 12 digits',
                 'PASSPORT' => 'Passport number must be a letter followed by 8 digits',
@@ -201,7 +205,7 @@ trait TaxpayerApi
         // Additional validation for specific types
         if ($normalizedType === 'PASSPORT') {
             $letter = substr($idValue, 0, 1);
-            if (! ctype_upper($letter)) {
+            if (!ctype_upper($letter)) {
                 throw new ValidationException(
                     'Invalid passport number format',
                     ['idValue' => ['Passport number must start with an uppercase letter']],
@@ -238,7 +242,7 @@ trait TaxpayerApi
      */
     private function enforceTinRateLimit(): void
     {
-        if (! $this->cache) {
+        if (!$this->cache) {
             return;
         }
 
@@ -278,5 +282,5 @@ trait TaxpayerApi
     public static function getValidationPattern(string $idType): ?string
     {
         return self::ID_PATTERNS[strtoupper($idType)] ?? null;
-}
+    }
 }
