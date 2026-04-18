@@ -291,7 +291,8 @@ class MyInvoisClient
         $this->buyerTIN = $request->input('buyerTIN');
         $this->buyerName = $request->input('buyerName');
         $this->buyerPhone = $request->input('buyerPhone');
-        $this->buyerEmail = $request->input('buyerEmail');
+        $rawBuyerEmail = (string) $request->input('buyerEmail', '');
+        $this->buyerEmail = filter_var($rawBuyerEmail, FILTER_VALIDATE_EMAIL) !== false ? $rawBuyerEmail : '';
         $this->buyerAddress1 = $request->input('buyerAddress1');
         $this->buyerAddress2 = $request->input('buyerAddress2');
         $this->buyerPostcode = $request->input('buyerPostcode');
@@ -303,7 +304,8 @@ class MyInvoisClient
         $this->supplierSST = $request->input('supplierSST');
         $this->supplierName = $request->input('supplierName');
         $this->supplierPhone = $request->input('supplierPhone');
-        $this->supplierEmail = $request->input('supplierEmail');
+        $rawSupplierEmail = (string) $request->input('supplierEmail', '');
+        $this->supplierEmail = filter_var($rawSupplierEmail, FILTER_VALIDATE_EMAIL) !== false ? $rawSupplierEmail : '';
         $this->supplierAddress1 = $request->input('supplierAddress1');
         $this->supplierAddress2 = $request->input('supplierAddress2');
         $this->supplierPostcode = $request->input('supplierPostcode');
@@ -410,10 +412,10 @@ class MyInvoisClient
                                         ["RegistrationName" => [["_" => $this->supplierName]]]
                                     ],
                                     "Contact" => [
-                                        [
+                                        array_filter([
                                             "Telephone" => [["_" => $this->supplierPhone]],
-                                            "ElectronicMail" => [["_" => $this->supplierEmail]]
-                                        ]
+                                            ...($this->supplierEmail ? ["ElectronicMail" => [["_" => $this->supplierEmail]]] : []),
+                                        ])
                                     ]
                                 ]
                             ]
@@ -442,30 +444,17 @@ class MyInvoisClient
                                         ["ID" => [["_" => "NA", "schemeID" => "TTX"]]]
                                     ],
                                     "Contact" => [
-                                        [
+                                        array_filter([
                                             "Telephone" => [["_" => $this->buyerPhone]],
-                                            "ElectronicMail" => [["_" => $this->buyerEmail]]
-                                        ]
+                                            ...($this->buyerEmail ? ["ElectronicMail" => [["_" => $this->buyerEmail]]] : []),
+                                        ])
                                     ]
                                 ]
                             ]
                         ]
                     ],
                     "AllowanceCharge" => $this->buildAllowanceCharges($request),
-                    "TaxTotal" => [
-                        [
-                            "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                            "TaxSubtotal" => [
-                                [
-                                    "TaxableAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                    "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
-                                    "TaxCategory" => [
-                                        ["ID" => [["_" => "01"]], "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ],
+                    "TaxTotal" => $this->buildDocumentTaxTotal($request),
                     "LegalMonetaryTotal" => [
                         [
                             "TaxExclusiveAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]],
@@ -886,6 +875,58 @@ class MyInvoisClient
         return $this->apiClient->request('GET', "/documents/{$documentId}/history");
     }
 
+    private function buildDocumentTaxTotal(Request $request): array
+    {
+        $lineItems = $request->input('lineItems', []);
+
+        if (empty($lineItems)) {
+            $taxCategoryId = $this->getTaxCategoryId(0);
+            return [[
+                "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
+                "TaxSubtotal" => [[
+                    "TaxableAmount" => [["_" => $this->totalPay, "currencyID" => "MYR"]],
+                    "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
+                    "TaxCategory" => [
+                        ["ID" => [["_" => $taxCategoryId]], "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]]
+                    ]
+                ]]
+            ]];
+        }
+
+        // Aggregate tax totals by category from line items
+        $byCategory = [];
+        foreach ($lineItems as $item) {
+            $taxRate = (float) ($item['taxRate'] ?? 0);
+            $taxAmount = (float) ($item['taxAmount'] ?? 0);
+            $subtotal = (float) ($item['subtotal'] ?? ((float) ($item['quantity'] ?? 1) * (float) ($item['unitPrice'] ?? 0)));
+            $categoryId = $this->getTaxCategoryId($taxRate);
+
+            if (!isset($byCategory[$categoryId])) {
+                $byCategory[$categoryId] = ['taxable' => 0.0, 'tax' => 0.0];
+            }
+            $byCategory[$categoryId]['taxable'] += $subtotal;
+            $byCategory[$categoryId]['tax'] += $taxAmount;
+        }
+
+        $totalTax = array_sum(array_column($byCategory, 'tax'));
+
+        $subtotals = [];
+        foreach ($byCategory as $categoryId => $amounts) {
+            $subtotals[] = [
+                "TaxableAmount" => [["_" => round($amounts['taxable'], 2), "currencyID" => "MYR"]],
+                "TaxAmount" => [["_" => round($amounts['tax'], 2), "currencyID" => "MYR"]],
+                "TaxCategory" => [
+                    ["ID" => [["_" => $categoryId]], "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]]
+                ]
+            ];
+        }
+
+        return [[
+            "TaxAmount" => [["_" => round($totalTax, 2), "currencyID" => "MYR"]],
+            "TaxSubtotal" => $subtotals,
+        ]];
+    }
+
     /**
      * Validate invoice data without submitting.
      *
@@ -988,7 +1029,7 @@ class MyInvoisClient
                                     "TaxAmount" => [["_" => 0, "currencyID" => "MYR"]],
                                     "Percent" => [["_" => 0]],
                                     "TaxCategory" => [
-                                        ["ID" => [["_" => "06"]], "TaxExemptionReason" => [["_" => ""]], "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]]
+                                        ["ID" => [["_" => "06"]], "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]]
                                     ]
                                 ]
                             ]
@@ -1039,11 +1080,10 @@ class MyInvoisClient
                                 "TaxAmount" => [["_" => $taxAmount, "currencyID" => "MYR"]],
                                 "Percent" => [["_" => $taxRate]],
                                 "TaxCategory" => [
-                                    [
+                                    array_filter([
                                         "ID" => [["_" => $taxCategoryId]],
-                                        "TaxExemptionReason" => [["_" => ""]],
-                                        "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]]
-                                    ]
+                                        "TaxScheme" => [["ID" => [["_" => "OTH", "schemeID" => "UN/ECE 5153", "schemeAgencyID" => "6"]]]],
+                                    ])
                                 ]
                             ]
                         ]
@@ -1113,7 +1153,8 @@ class MyInvoisClient
             $charges = [];
             foreach ($allowanceCharges as $charge) {
                 $isCharge = $charge['chargeIndicator'] ?? false;
-                $reason = $charge['allowanceChargeReason'] ?? ($charge['reason'] ?? '');
+                $reason = $charge['allowanceChargeReason'] ?? ($charge['reason'] ?? 'NA');
+                $reason = $reason !== '' ? $reason : 'NA';
                 $amount = (float) ($charge['amount'] ?? 0);
 
                 $charges[] = [
@@ -1125,16 +1166,16 @@ class MyInvoisClient
             return $charges;
         }
 
-        // Fallback: Default empty allowance/charge structure (per SDK sample)
+        // MyInvois requires exactly 2 AllowanceCharge entries (one discount, one charge)
         return [
             [
                 "ChargeIndicator" => [["_" => false]],
-                "AllowanceChargeReason" => [["_" => ""]],
+                "AllowanceChargeReason" => [["_" => "NA"]],
                 "Amount" => [["_" => 0.00, "currencyID" => "MYR"]]
             ],
             [
                 "ChargeIndicator" => [["_" => true]],
-                "AllowanceChargeReason" => [["_" => ""]],
+                "AllowanceChargeReason" => [["_" => "NA"]],
                 "Amount" => [["_" => 0.00, "currencyID" => "MYR"]]
             ]
         ];
