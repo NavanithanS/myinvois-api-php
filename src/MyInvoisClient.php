@@ -259,16 +259,21 @@ class MyInvoisClient
             'Negeri Sembilan' => '05',
             'Pahang' => '06',
             'Pulau Pinang' => '07',
+            'Penang' => '07',
             'Perak' => '08',
             'Perlis' => '09',
             'Selangor' => '10',
             'Terengganu' => '11',
             'Sabah' => '12',
             'Sarawak' => '13',
-            'Wilayah Persekutuan Kuala Lumpur' => '14',
-            'Wilayah Persekutuan Labuan' => '15',
-            'Wilayah Persekutuan Putrajaya' => '16',
+            'WP Kuala Lumpur' => '14',
+            'Kuala Lumpur' => '14',
+            'WP Labuan' => '15',
+            'Labuan' => '15',
+            'WP Putrajaya' => '16',
+            'Putrajaya' => '16',
             'Not Applicable' => '17',
+            'NA' => '17',
         ];
     }
 
@@ -297,7 +302,12 @@ class MyInvoisClient
         $this->buyerAddress2 = $request->input('buyerAddress2');
         $this->buyerPostcode = $request->input('buyerPostcode');
         $this->buyerCity = $request->input('buyerCity');
-        $this->buyerStateCode = $this->stateMapping[$request->input('buyerState')] ?? '17';
+        $inputBuyerState = $request->input('buyerState');
+        if (is_numeric($inputBuyerState) && strlen($inputBuyerState) === 2) {
+            $this->buyerStateCode = $inputBuyerState;
+        } else {
+            $this->buyerStateCode = $this->stateMapping[$inputBuyerState] ?? '17';
+        }
         $this->supplierIdType = $request->input('supplierIdType');
         $this->supplierTIN = $request->input('supplierTIN');
         $this->supplierIC = $request->input('supplierIC');
@@ -310,7 +320,12 @@ class MyInvoisClient
         $this->supplierAddress2 = $request->input('supplierAddress2');
         $this->supplierPostcode = $request->input('supplierPostcode');
         $this->supplierCity = $request->input('supplierCity');
-        $this->supplierStateCode = $this->stateMapping[$request->input('supplierState')] ?? '17';
+        $inputSupplierState = $request->input('supplierState');
+        if (is_numeric($inputSupplierState) && strlen($inputSupplierState) === 2) {
+            $this->supplierStateCode = $inputSupplierState;
+        } else {
+            $this->supplierStateCode = $this->stateMapping[$inputSupplierState] ?? '17';
+        }
         $this->supplierMsicCode = $request->input('supplierMsicCode') ?: '68109';
         $this->supplierMsicDescription = $request->input('supplierMsicDescription') ?: 'Real estate activities with own or leased property n.e.c.';
 
