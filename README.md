@@ -2,7 +2,10 @@
 
 <div align="center">
 
+[![Latest Stable Version](https://img.shields.io/packagist/v/nava/myinvois.svg)](https://packagist.org/packages/nava/myinvois)
+[![License](https://img.shields.io/packagist/l/nava/myinvois.svg)](https://github.com/NavanithanS/myinvois-api-php/blob/master/LICENSE)
 [![PHP Version Require](https://img.shields.io/packagist/php-v/nava/myinvois.svg)](https://packagist.org/packages/nava/myinvois)
+[![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-blue)](CHANGELOG.md)
 
 </div>
 
