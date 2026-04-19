@@ -1,36 +1,31 @@
-# MyInvois PHP Client Library 🇲🇾
+# MyInvois PHP Client Library
 
 <div align="center">
 
-[![Latest Stable Version](https://img.shields.io/packagist/v/nava/myinvois.svg)](https://packagist.org/packages/nava/myinvois)
-[![License](https://img.shields.io/packagist/l/nava/myinvois.svg)](https://github.com/NavanithanS/myinvois-api-php/blob/master/LICENSE)
 [![PHP Version Require](https://img.shields.io/packagist/php-v/nava/myinvois.svg)](https://packagist.org/packages/nava/myinvois)
-[![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-blue)](CHANGELOG.md)
 
 </div>
 
-> **⚠️ BETA STATUS**: This library is currently in beta. While functional and actively developed, APIs may change before final release. Please test thoroughly before using in production.
-
 A robust PHP client library for Malaysia's MyInvois API, providing a clean, type-safe interface for tax document submissions with comprehensive validation and error handling.
 
-## ✨ Features
+## Features
 
--   🔒 **Secure Authentication** - OAuth2 with automatic token management
--   📄 **Complete Document Operations** - Submit, retrieve, search, and manage documents
--   🏢 **Taxpayer Services** - Validation and TIN operations
--   ✅ **Built-in Validation** - Comprehensive input validation for all entity types
--   🚦 **Rate Limiting** - Built-in retry mechanisms with exponential backoff
--   📦 **Laravel Ready** - Auto-discovery service provider and facades
--   🧪 **Thoroughly Tested** - Comprehensive test coverage with PHPUnit
--   🔧 **Developer Friendly** - PSR-4 autoloading, typed exceptions, and clear documentation
+-   **Secure Authentication** - OAuth2 with automatic token management
+-   **Complete Document Operations** - Submit, retrieve, search, and manage documents
+-   **Taxpayer Services** - Validation and TIN operations
+-   **Built-in Validation** - Comprehensive input validation for all entity types
+-   **Rate Limiting** - Built-in retry mechanisms with exponential backoff
+-   **Laravel Ready** - Auto-discovery service provider and facades
+-   **Thoroughly Tested** - Comprehensive test coverage with PHPUnit
+-   **Developer Friendly** - PSR-4 autoloading, typed exceptions, and clear documentation
 
-## 📋 Requirements
+## Requirements
 
 -   **PHP**: PHP 8.1+
 -   **Extensions**: JSON, OpenSSL
 -   **Composer**: For dependency management
 
-## 🚀 Installation
+## Installation
 
 Install via Composer:
 
@@ -38,7 +33,7 @@ Install via Composer:
 composer require nava/myinvois
 ```
 
-## ⚡ Quick Start
+## Quick Start
 
 ### Basic Usage
 
@@ -83,7 +78,7 @@ $client = new MyInvoisClient($id, $secret, MyInvoisClient::PRODUCTION_URL, $cach
 $client->onBehalfOf('C1234567890'); // set taxpayer TIN
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Standalone
 
@@ -188,7 +183,7 @@ class InvoiceController extends Controller
 }
 ```
 
-## 📚 Advanced Usage Examples
+## Advanced Usage Examples
 
 ### Document Operations
 
@@ -277,7 +272,7 @@ $version = $client->findDocumentTypeVersion(45, 2.0);
 $versionDetails = $client->getDocumentTypeVersionDetails('Invoice', '1.0');
 ```
 
-## 🧪 Testing & Quality
+## Testing & Quality
 
 ```bash
 # Tests
@@ -291,7 +286,7 @@ composer analyse
 composer format
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### Core Components
 
@@ -314,7 +309,7 @@ composer format
 | Notifications       | Manage system notifications           |
 | Status Tracking     | Monitor submission status             |
 
-## 📖 Documentation
+## Documentation
 
 The essentials are embedded here for convenience.
 
@@ -535,7 +530,7 @@ Rate limiting
 
 -   Results are cached by default; set a custom cache repository in the constructor if needed
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please follow these steps:
 
@@ -560,21 +555,21 @@ We welcome contributions! Please follow these steps:
 -   Update documentation for new features
 -   Follow existing code style and patterns
 
-## 🔒 Security
+## Security
 
 If you discover security vulnerabilities, please email **gua@navins.biz** instead of using the issue tracker. All security vulnerabilities will be promptly addressed.
 
-## 📄 License
+## License
 
 This library is licensed under the [MIT License](LICENSE). See the LICENSE file for details.
 
-## 🙏 Credits
+## Credits
 
 -   **Author**: [Nava](https://github.com/NavanithanS)
 -   **Contributors**: [All Contributors](../../contributors)
 -   Built with ❤️ for the Malaysian developer community
 
-## 🆘 Support
+## Support
 
 -   **Documentation**: Check this README and inline code documentation
 -   **Issues**: [GitHub Issues](https://github.com/NavanithanS/myinvois-api-php/issues)
@@ -583,5 +578,5 @@ This library is licensed under the [MIT License](LICENSE). See the LICENSE file 
 ---
 
 <div align="center">
-Made with ❤️ in Malaysia 🇲🇾
+Made with ❤️ in Malaysia
 </div>
