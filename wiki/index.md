@@ -48,3 +48,11 @@ Catalog of all pages. Updated on every ingest or significant change.
 ---
 
 *Total pages: 14 | Last updated: 2026-04-18*
+
+---
+
+## Plans
+
+| Page | Summary |
+|------|---------|
+| [[plans/sdk-release-notes-2026\|sdk-release-notes-2026]] | Approved plan to adopt SDK release notes Jul 2025–Sep 2026 (state 17, PASSPORT, field rules, SVDP 1.2/1.3, new API params) for 1.2.0 |

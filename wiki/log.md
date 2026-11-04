@@ -32,3 +32,5 @@ Key findings: two-domain architecture, XAdES signing with hardcoded passphrase `
 ## [2026-11-04] update | Dev stack can resolve to Laravel 12 / testbench 10 / PHPUnit 11 to clear Dependabot alerts; tests avoid withConsecutive (removed in PHPUnit 10)
 
 ## [2026-11-04] add | GitHub Actions CI (PHP 8.2–8.4: lint, PHPUnit, composer audit); lock pinned to platform PHP 8.2; stale TIN/config-publish tests fixed
+
+## [2026-11-04] add | Plan: adopt SDK release notes Jul 2025–Sep 2026 (wiki/plans/sdk-release-notes-2026.md)
