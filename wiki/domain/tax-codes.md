@@ -1,6 +1,6 @@
 ---
 tags: [domain, tax, codes, malaysia]
-updated: 2026-04-18
+updated: 2026-11-04
 ---
 
 # Malaysian Tax Codes & Reference Data
@@ -72,6 +72,8 @@ Validated by `TaxpayerApi::validateTinFormat()` against `/^(C\d{10}|IG\d{10,12}|
 | 12 digits | `123456789012` | NRIC-based individual |
 
 `Config::TIN_PATTERN` (`/^C\d{10}$/`) is more restrictive — the trait pattern is authoritative at runtime.
+
+`IntermediaryAuthenticationClient::onBehalfOf()` uses its own, wider pattern `/^(C\d{10,12}|IG\d{11,12}|\d{12})$/` — `C` + 10–12 digits was widened deliberately (commit `72ee617`) because real company TINs exceed 10 digits. Tests treat `C12345678901` as valid.
 
 ## Secondary ID Types
 

@@ -2,7 +2,6 @@
 
 namespace Nava\MyInvois\Tests\Laravel;
 
-use Illuminate\Support\Facades\Config;
 use Nava\MyInvois\Contracts\MyInvoisClientFactory;
 use Nava\MyInvois\Laravel\MyInvoisServiceProvider;
 use Nava\MyInvois\MyInvoisClient;
@@ -38,10 +37,16 @@ class ServiceProviderTest extends TestCase
     {
         $this->artisan('vendor:publish', ['--provider' => MyInvoisServiceProvider::class]);
 
-        $this->assertFileExists(config_path('myinvois.php'));
-        $this->assertEquals(
-            Config::get('myinvois.client_id'),
-            'your_client_id'
-        );
+        $published = config_path('myinvois.php');
+        $this->assertFileExists($published);
+
+        try {
+            $config = require $published;
+            $this->assertIsArray($config);
+            $this->assertArrayHasKey('client_id', $config);
+            $this->assertArrayHasKey('client_secret', $config);
+        } finally {
+            @unlink($published);
+        }
     }
 }

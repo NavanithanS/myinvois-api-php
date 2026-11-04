@@ -79,7 +79,7 @@ class IntermediaryAuthenticationClientTest extends TestCase
             'invalid-tin',
             'D1234567890', // Wrong prefix
             'C123456789', // Too short
-            'C12345678901', // Too long
+            'C1234567890123', // Too long (C + 13 digits; C + 10-12 is valid)
             'C123456789A', // Contains letter
             'CXXXXXXXXXX', // Non-numeric
             '', // Empty string

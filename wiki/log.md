@@ -30,3 +30,5 @@ Structure created:
 Key findings: two-domain architecture, XAdES signing with hardcoded passphrase `"BioEMyInvois"`, AllowanceCharge 2-entry requirement, SSL verify:false, duplicate submission 10-min window, service tax rate 6%/8% mismatch, `dd()` in production cert-load path, duplicate TaxpayerApi use statement, default MSIC `68109`, per-TIN intermediary token cache.
 
 ## [2026-11-04] update | Dev stack can resolve to Laravel 12 / testbench 10 / PHPUnit 11 to clear Dependabot alerts; tests avoid withConsecutive (removed in PHPUnit 10)
+
+## [2026-11-04] add | GitHub Actions CI (PHP 8.2–8.4: lint, PHPUnit, composer audit); lock pinned to platform PHP 8.2; stale TIN/config-publish tests fixed
