@@ -58,4 +58,6 @@ jobs:
         run: vendor/bin/phpunit --no-coverage
 
       - name: Security Audit
-        run: composer audit --no-interaction
+        # Fail on known vulnerabilities; only report abandoned packages
+        # (spatie/data-transfer-object and symfony/inflector are abandoned upstream).
+        run: composer audit --no-interaction --abandoned=report
