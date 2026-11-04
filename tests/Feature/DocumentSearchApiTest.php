@@ -48,13 +48,13 @@ class DocumentSearchApiTest extends TestCase
             ]))
         );
 
+        $debugMessages = [];
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->exactly(2))
             ->method('debug')
-            ->withConsecutive(
-                [$this->stringContains('Searching documents')],
-                [$this->stringContains('Document search completed')]
-            );
+            ->willReturnCallback(function ($message) use (&$debugMessages): void {
+                $debugMessages[] = $message;
+            });
 
         $this->client->setLogger($logger);
 
@@ -67,6 +67,10 @@ class DocumentSearchApiTest extends TestCase
         ];
 
         $result = $this->client->searchDocuments($filters);
+
+        $this->assertCount(2, $debugMessages);
+        $this->assertStringContainsStringIgnoringCase('Searching documents', $debugMessages[0]);
+        $this->assertStringContainsStringIgnoringCase('Document search completed', $debugMessages[1]);
 
         // Verify request
         $request = $this->getLastRequest();

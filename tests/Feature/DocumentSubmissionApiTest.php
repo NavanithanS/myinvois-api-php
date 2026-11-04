@@ -48,16 +48,20 @@ class DocumentSubmissionApiTest extends TestCase
             ]))
         );
 
+        $debugMessages = [];
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->exactly(2))
             ->method('debug')
-            ->withConsecutive(
-                [$this->stringContains('Submitting documents')],
-                [$this->stringContains('Documents submitted successfully')]
-            );
+            ->willReturnCallback(function ($message) use (&$debugMessages): void {
+                $debugMessages[] = $message;
+            });
 
         $this->client->setLogger($logger);
         $response = $this->client->submitDocuments([$this->validDocument]);
+
+        $this->assertCount(2, $debugMessages);
+        $this->assertStringContainsStringIgnoringCase('Submitting documents', $debugMessages[0]);
+        $this->assertStringContainsStringIgnoringCase('Documents submitted successfully', $debugMessages[1]);
 
         // Verify request
         $request = $this->getLastRequest();
