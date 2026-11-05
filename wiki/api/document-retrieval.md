@@ -1,6 +1,6 @@
 ---
 tags: [api, documents, retrieval]
-updated: 2026-04-18
+updated: 2026-11-05
 ---
 
 # Document Retrieval
@@ -39,7 +39,8 @@ Both methods return a normalized array. All date fields are mapped to `DateTimeI
 | `longId` | ?string | 40+ char uppercase alphanumeric — only present after validation |
 | `internalId` | string | Issuer's internal reference |
 | `typeName` | string | e.g. "Invoice" |
-| `typeVersionName` | string | e.g. "1.1" |
+| `typeVersionName` | string | e.g. "Version 1" |
+| `typeVersionNumber` | ?string | e.g. "1.1" / "1.3". Added by LHDN on 25 Sep 2026 (Production 24 Oct 2026). Both methods return `null` when an older response doesn't have it. Use this, not `typeVersionName`, to detect SVDP versions 1.2/1.3 |
 | `issuerTin` | string | Supplier TIN |
 | `issuerName` | string | Supplier name |
 | `receiverId` | ?string | Buyer TIN |

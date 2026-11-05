@@ -6,6 +6,7 @@ use DateTimeInterface;
 use Nava\MyInvois\Exception\ApiException;
 use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Traits\DateValidationTrait;
+use Nava\MyInvois\Validation\ClassificationValidator;
 use Psr\Log\LoggerInterface;
 use Webmozart\Assert\Assert;
 
@@ -142,6 +143,11 @@ trait DocumentSearchApi
             }
         }
 
+        // Validate classification codes (SDK 25 Sep 2026: comma-separated list, e.g. "001,002")
+        if (isset($filters['classificationCode'])) {
+            $this->normalizeClassificationCodes($filters['classificationCode']);
+        }
+
         // Validate search query
         if (isset($filters['searchQuery'])) {
             if (! preg_match('/^[A-Za-z0-9_\- ]+$/', (string) $filters['searchQuery'])) {
@@ -176,6 +182,10 @@ trait DocumentSearchApi
             }
         }
 
+        if (isset($filters['classificationCode'])) {
+            $params['classificationCode'] = implode(',', $this->normalizeClassificationCodes($filters['classificationCode']));
+        }
+
         // Add other direct parameters
         $directFields = ['pageSize', 'pageNo', 'status', 'documentType', 'uuid', 'searchQuery', 'invoiceDirection'];
         foreach ($directFields as $field) {
@@ -191,5 +201,54 @@ trait DocumentSearchApi
         }
 
         return $params;
+    }
+
+    /**
+     * Normalize the classificationCode filter to a list of 3-digit codes.
+     *
+     * Accepts a comma-separated string ("001,002") or an array (['001', '002']).
+     *
+     * @param  mixed  $value
+     * @return array<int, string>
+     *
+     * @throws ValidationException If the value is empty or contains an unknown code
+     */
+    private function normalizeClassificationCodes($value): array
+    {
+        if (is_string($value)) {
+            $value = explode(',', $value);
+        }
+
+        if (! is_array($value)) {
+            throw new ValidationException(
+                'Invalid classification code filter',
+                ['classificationCode' => ['Classification code must be a comma-separated string or an array of codes']]
+            );
+        }
+
+        $codes = [];
+        $validator = new ClassificationValidator();
+        foreach ($value as $code) {
+            $code = is_scalar($code) ? trim((string) $code) : '';
+            if ($code === '') {
+                continue;
+            }
+            if (! preg_match('/^\d{3}$/', $code) || $validator->getDescription($code) === null) {
+                throw new ValidationException(
+                    'Invalid classification code filter',
+                    ['classificationCode' => [sprintf('"%s" is not a valid 3-digit classification code', $code)]]
+                );
+            }
+            $codes[] = $code;
+        }
+
+        if ($codes === []) {
+            throw new ValidationException(
+                'Invalid classification code filter',
+                ['classificationCode' => ['At least one classification code is required when the filter is set']]
+            );
+        }
+
+        return array_values(array_unique($codes));
     }
 }

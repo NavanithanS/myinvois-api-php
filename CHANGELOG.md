@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `searchDocuments()` accepts a `classificationCode` filter, as a
+  comma-separated string or an array of 3-digit codes (LHDN, 25 Sep 2026).
+- `getDocument()` / `getDocumentDetails()` return `typeVersionNumber`
+  (e.g. `"1.1"`). It is `null` when the API omits it.
+- `searchTaxpayerTin(?taxpayerName, ?idType, ?idValue, ?fileType)` supports
+  name search and the individual/non-individual `fileType` filter
+  (1 = IG/individual, 2 = non-individual). The SDK's allowed parameter
+  combinations are checked locally.
+
+### Deprecated
+- `getTaxpayerTin($idType, $idValue)`. Use `searchTaxpayerTin(null, $idType, $idValue)`.
+  Its behaviour is unchanged.
+
 ### Changed
 - **State code 17 (behaviour change)**: `createDocument()` no longer falls back
   to state `17` (Not Applicable) for missing or unknown `buyerState` /

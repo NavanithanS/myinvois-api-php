@@ -35,6 +35,7 @@ trait DocumentRetrievalApi
      *     internalId: string,
      *     typeName: string,
      *     typeVersionName: string,
+     *     typeVersionNumber: ?string,
      *     issuerTin: string,
      *     issuerName: string,
      *     receiverId?: string,
@@ -115,6 +116,9 @@ trait DocumentRetrievalApi
      */
     private function mapDocumentResponse(array $response): array
     {
+        // typeVersionNumber (e.g. "1.1") added by LHDN 25 Sep 2026; older responses lack it
+        $response['typeVersionNumber'] = $response['typeVersionNumber'] ?? null;
+
         // Map date fields to DateTimeImmutable objects
         $dateFields = [
             'dateTimeIssued',

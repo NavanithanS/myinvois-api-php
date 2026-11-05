@@ -26,6 +26,7 @@ trait DocumentDetailsApi
      *     internalId: string,
      *     typeName: string,
      *     typeVersionName: string,
+     *     typeVersionNumber: ?string,
      *     issuerTin: string,
      *     issuerName: string,
      *     receiverId: ?string,
@@ -175,6 +176,8 @@ trait DocumentDetailsApi
             }
 
             $optionalFields = [
+                // typeVersionNumber (e.g. "1.1") added by LHDN 25 Sep 2026; older responses lack it
+                'typeVersionNumber',
                 'longId',
                 'receiverId',
                 'receiverName',

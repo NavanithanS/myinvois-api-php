@@ -1,6 +1,6 @@
 ---
 tags: [api, documents, search]
-updated: 2026-04-18
+updated: 2026-11-05
 ---
 
 # Document Search
@@ -44,12 +44,15 @@ $results = $client->searchDocuments([
 | `invoiceDirection` | string | `Sent` or `Received` | |
 | `uuid` | string | | Filter by specific UUID |
 | `searchQuery` | string | `[A-Za-z0-9_\- ]+` | Text search — no special chars |
+| `classificationCode` | string \| string[] | each a known 3-digit code | Since 1.2.0 (LHDN added it 25 Sep 2026, Production 24 Oct 2026). `"001,002"` or `['001','002']` → sent as `001,002` (trimmed, de-duplicated). Codes are checked against `ClassificationValidator` (matches the SDK `ClassificationCodes.json`, 45 codes). |
 | `pageNo` | int | ≥ 1 | |
 | `pageSize` | int | 1–100 | |
 
 **Date range requirement**: at least one complete date range (both `submissionDateFrom`+`submissionDateTo` OR both `issueDateFrom`+`issueDateTo`) must be provided. Providing only one bound of a range throws `ValidationException`.
 
 Both date range types cannot exceed **30 days**. Validated by `DateValidationTrait::validateDateRange()`.
+
+**Result cap**: the endpoint returns at most **10,000 documents** per query (SDK). Narrow the date range or add filters (e.g. `classificationCode`) to see every document.
 
 ## Response
 

@@ -36,3 +36,5 @@ Key findings: two-domain architecture, XAdES signing with hardcoded passphrase `
 ## [2026-11-04] add | Plan: adopt SDK release notes Jul 2025–Sep 2026 (wiki/plans/sdk-release-notes-2026.md)
 
 ## [2026-11-05] update | State code 17 now throws unless consolidated (EI00000000010); PASSPORT accepts 1–12 alphanumerics (phase 1 of sdk-release-notes-2026)
+
+## [2026-11-05] add | Search Documents classificationCode filter, typeVersionNumber on Get Document/Details, searchTaxpayerTin(taxpayerName, idType, idValue, fileType) (phase 2)

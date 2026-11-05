@@ -739,25 +739,99 @@ class MyInvoisClient
         return $response;
     }
 
+    /**
+     * Search for a taxpayer's TIN.
+     *
+     * Endpoint: GET /api/v1.0/taxpayer/search/tin
+     *
+     * Supported combinations (LHDN SDK "Search Taxpayer's TIN"):
+     *  - taxpayerName
+     *  - taxpayerName + idType + idValue
+     *  - idType + idValue
+     *  - idType + idValue + fileType
+     *  - all parameters (AND search)
+     *
+     * @param  string|null  $taxpayerName  Required unless idType + idValue are given
+     * @param  string|null  $idType  NRIC, PASSPORT, BRN or ARMY (must come with idValue)
+     * @param  string|null  $idValue  ID value (must come with idType)
+     * @param  int|null  $fileType  1 = individual (IG TIN), 2 = non-individual; requires idType + idValue
+     * @return array API response, e.g. ['tin' => 'C1234567890']
+     *
+     * @throws ValidationException If the parameter combination or ID format is invalid
+     * @throws ApiException 400 when the search is not conclusive (more than one TIN), 404 when none matches
+     */
+    public function searchTaxpayerTin(
+        ?string $taxpayerName = null,
+        ?string $idType = null,
+        ?string $idValue = null,
+        ?int $fileType = null
+    ): array {
+        $taxpayerName = $taxpayerName !== null ? trim($taxpayerName) : '';
+        $idType = $idType !== null ? strtoupper(trim($idType)) : '';
+        $idValue = $idValue !== null ? trim($idValue) : '';
+
+        $errors = [];
+        if (($idType === '') !== ($idValue === '')) {
+            $errors[$idType === '' ? 'idType' : 'idValue'][] = 'idType and idValue must be provided together';
+        }
+        if ($taxpayerName === '' && ($idType === '' || $idValue === '')) {
+            $errors['taxpayerName'][] = 'taxpayerName is required unless idType and idValue are provided';
+        }
+        if ($fileType !== null) {
+            if (!in_array($fileType, [1, 2], true)) {
+                $errors['fileType'][] = 'fileType must be 1 (individual) or 2 (non-individual)';
+            } elseif ($idType === '' || $idValue === '') {
+                $errors['fileType'][] = 'fileType can only be used together with idType and idValue';
+            }
+        }
+        if ($errors !== []) {
+            throw new ValidationException('Invalid taxpayer TIN search parameters', $errors, 422);
+        }
+
+        if ($idType !== '') {
+            $this->validateIdType($idType);
+            $this->validateIdValue($idType, $idValue);
+        }
+
+        $query = array_filter([
+            'taxpayerName' => $taxpayerName,
+            'idType' => $idType,
+            'idValue' => $idValue,
+            'fileType' => $fileType !== null ? (string) $fileType : '',
+        ], static fn ($value) => $value !== '');
+
+        return $this->requestTaxpayerTinSearch($query);
+    }
+
+    /**
+     * @deprecated since 1.2.0, use searchTaxpayerTin(null, $idType, $idValue) instead.
+     *             Kept with its original behaviour (no local ID format validation).
+     */
     public function getTaxpayerTin($idType, $ic)
+    {
+        if (empty($ic)) {
+            throw new \InvalidArgumentException('idValue must be provided');
+        }
+
+        return $this->requestTaxpayerTinSearch([
+            'idType' => $idType,
+            'idValue' => $ic,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $query
+     */
+    private function requestTaxpayerTinSearch(array $query)
     {
         $this->checkRateLimit(
             'tin_search',
             $this->createRateLimitConfig('searchTin', 60, 60) // 60 requests per minute
         );
 
-        if (empty($ic)) {
-            throw new \InvalidArgumentException('idValue must be provided');
-        }
-
-        $response = $this->apiClient->request('GET', '/api/v1.0/taxpayer/search/tin', [
-            'query' => [
-                'idType' => $idType,
-                'idValue' => $ic
-            ]
+        return $this->apiClient->request('GET', '/api/v1.0/taxpayer/search/tin', [
+            'query' => $query,
         ]);
-
-        return $response;
     }
 
     // validateTaxpayerTin implemented via TaxpayerApi trait

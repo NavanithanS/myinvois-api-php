@@ -72,14 +72,31 @@ Before 1.2.0 PASSPORT required `[A-Z]` + 8 digits and an uppercase first letter;
 ### Endpoint
 
 ```
-GET /api/v1.0/taxpayer/search/tin?idType={type}&idValue={value}
+GET /api/v1.0/taxpayer/search/tin?taxpayerName={name}&idType={type}&idValue={value}&fileType={1|2}
 ```
 
-### Usage
+### Usage (since 1.2.0)
 
 ```php
-$response = $client->getTaxpayerTin('NRIC', '123456789012');
+$client->searchTaxpayerTin('ABC Sdn Bhd');                               // name only
+$client->searchTaxpayerTin(null, 'BRN', '201901234567');                 // id only
+$client->searchTaxpayerTin(null, 'NRIC', '770625015324', 1);             // id + fileType (1=individual/IG, 2=non-individual)
+$client->searchTaxpayerTin('ABC Sdn Bhd', 'BRN', '201901234567', 2);     // all (AND search)
+// => ['tin' => 'C1234567890']
 ```
+
+The SDK allows only these combinations, and the library checks them before any HTTP call (`ValidationException`):
+
+| Rule | Error key |
+|------|-----------|
+| `taxpayerName` required unless both `idType` + `idValue` given | `taxpayerName` |
+| `idType` and `idValue` must come together | `idType` / `idValue` |
+| `fileType` ∈ {1, 2} and **only with idType + idValue**. The SDK lists no name+fileType combination | `fileType` |
+| ID type and value use the same patterns as TIN validation (see below) | `idType` / `idValue` |
+
+API outcomes: **200** `{tin}`; **400** `BadArgument` (bad parameter set) or *"Search criteria in not conclusive and more than one TIN can be found"*, so add more criteria; **404** no match.
+
+`getTaxpayerTin($idType, $idValue)` is **deprecated** (1.2.0). It keeps its old behaviour (no local ID-format checks; `InvalidArgumentException` on empty value) and uses the same request path.
 
 Rate limited to **60 requests/minute** (`createRateLimitConfig('searchTin', 60, 60)`).
 
