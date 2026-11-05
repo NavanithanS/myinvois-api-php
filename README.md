@@ -235,8 +235,12 @@ $qrCode = $client->generateQrCode('ABC12345DEFGHI');
 // Validate TIN (idType case‑insensitive)
 $isValid = $client->validateTaxpayerTin('C1234567890', 'nric', '770625015324');
 
-// Get taxpayer TIN information
-$tinInfo = $client->getTaxpayerTin('NRIC', '201901234567');
+// Search for a TIN (taxpayerName, or idType + idValue; fileType 1 = individual, 2 = non-individual)
+$tin = $client->searchTaxpayerTin(null, 'BRN', '201901234567', 2)['tin'];
+$tin = $client->searchTaxpayerTin('ABC Sdn Bhd');
+
+// Deprecated since 1.2.0, still works:
+$tinInfo = $client->getTaxpayerTin('NRIC', '770625015324');
 ```
 
 ### Error Handling
@@ -434,6 +438,41 @@ Versioned notes
 $client->submitRefundNote(['invoiceNumber' => 'RN-001', 'issueDate' => '2024-01-01'], '1.1');
 ```
 
+LHDN field rules (since 1.2.0)
+
+`createDocument()` and `submitDocuments()` (JSON) check documents against the LHDN field rules before any HTTP call. The rules cover field lengths, `YYYY-MM-DD` dates, state codes (`17` only for consolidated e-Invoices with buyer TIN `EI00000000010` or non-Malaysian addresses), postcodes, the unit/country/currency/payment-mode/tax-type code lists, amounts (no scientific notation, ≤ 26 digits) and PASSPORT IDs (≤ 12). Every violation is reported at once:
+
+```php
+try {
+  $client->submitDocuments($documents);
+} catch (\Nava\MyInvois\Exception\ValidationException $e) {
+  // ['documents[0].Invoice.ID' => ['must not exceed 50 characters (got 51)'], ...]
+  $e->getErrors();
+}
+
+// Or validate a UBL JSON string yourself
+(new \Nava\MyInvois\Validation\DocumentFieldRulesValidator())->getViolations($ublJson);
+```
+
+SVDP: Voluntary Disclosure Programme (until 31 Dec 2027)
+
+Versions `1.2` (unsigned) and `1.3` (signed) can be used until 31 Dec 2027. During the programme the issue date may be backdated (earliest 1 Aug 2024).
+
+```php
+// createDocument() always signs, so it supports 1.3 (1.1 is the default)
+$client->createDocument(new \Illuminate\Http\Request([
+  // ...the usual createDocument() fields...
+  'documentVersion' => '1.3',
+  'issueDate' => '2025-03-15',   // YYYY-MM-DD, >= 2024-08-01, not in the future
+  'issueTime' => '09:30:00Z',    // optional, UTC
+]));
+
+// Unsigned SVDP documents: build UBL with InvoiceTypeCode listVersionID "1.2" (no UBLExtensions/Signature)
+$client->submitDocuments([['document' => $ublJson12, 'documentHash' => hash('sha256', $ublJson12), 'codeNumber' => 'INV-001']]);
+
+\Nava\MyInvois\Config::isSvdpActive(); // false after 2027-12-31 (Malaysia time)
+```
+
 ### Search
 
 Basic filters
@@ -448,6 +487,14 @@ $filters = [
 ];
 $result = $client->searchDocuments($filters);
 ```
+
+Classification code filter (one or more 3-digit codes)
+
+```php
+$result = $client->searchDocuments($filters + ['classificationCode' => ['001', '022']]); // or '001,022'
+```
+
+The endpoint returns at most 10,000 documents per query, so narrow the filters when you need everything.
 
 Result mapping
 
@@ -526,8 +573,10 @@ try {
 Case-insensitive ID type
 
 ```php
-$client->validateTaxpayerTin('C1234567890', 'passport', 'A12345678');
+$client->validateTaxpayerTin('C1234567890', 'passport', 'A12345678'); // PASSPORT: 1-12 letters/digits
 ```
+
+Since 1 Aug 2026 LHDN also cross-checks the TIN against the BRN. A TIN that is valid on its own returns `false` (404) when paired with a BRN registered to someone else. Ask buyers to keep their BRN up to date with HASiL.
 
 Rate limiting
 

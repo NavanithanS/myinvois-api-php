@@ -42,3 +42,5 @@ Key findings: two-domain architecture, XAdES signing with hardcoded passphrase `
 ## [2026-11-05] add | DocumentFieldRulesValidator (field lengths, dates, code lists, amounts ≤26 digits/no exponent, PASSPORT ≤12) for createDocument() + submitDocuments(); UnitTypeValidator; SDK currency/country lists; lossless JSON minify (phase 3)
 
 ## [2026-11-05] add | SVDP 1.2/1.3: Config::isSvdpActive/isSvdpVersion, createDocument documentVersion + backdated issueDate (1.3 only), SvdpValidator signature/window checks in submitDocuments/submitDocument, injectable clock (phase 4)
+
+## [2026-11-05] update | Taxpayer TIN+BRN cross-check note, README sections for SVDP/field rules/new methods, CHANGELOG 1.2.0; plan sdk-release-notes-2026 marked done (phase 5)

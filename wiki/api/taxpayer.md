@@ -67,6 +67,10 @@ Before 1.2.0 PASSPORT required `[A-Z]` + 8 digits and an uppercase first letter;
 | 404 | Return `false` (not an exception) |
 | Any other error | Re-throw `ApiException` |
 
+### TIN + BRN cross-check (since 1 Aug 2026)
+
+SDK release note 12 Jun 2026: from **1 Aug 2026** Validate TIN also checks that the TIN and the Business Registration Number belong together. Expect **more `false` (404) results** for `idType = BRN` when the buyer's BRN on record with HASiL is wrong or out of date, even if the TIN alone is valid. Nothing changed in the library. Get accurate BRNs from buyers and ask them to update HASiL. Because `false` is never cached, a corrected BRN takes effect on the next call.
+
 ## TIN Search
 
 ### Endpoint

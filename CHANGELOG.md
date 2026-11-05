@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.2.0] - Unreleased
+
+Adopts the LHDN MyInvois SDK release notes from Jul 2025 to Sep 2026
+(https://sdk.myinvois.hasil.gov.my/sdk-1-0-release/). The release date will
+be set when the version is tagged.
 
 ### Added
 - `Validation\DocumentFieldRulesValidator`, `Validation\UnitTypeValidator`
@@ -35,7 +39,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `getTaxpayerTin($idType, $idValue)`. Use `searchTaxpayerTin(null, $idType, $idValue)`.
   Its behaviour is unchanged.
 
+### Notes
+- Since 1 Aug 2026 LHDN's Validate TIN cross-checks the TIN against the BRN.
+  `validateTaxpayerTin(..., 'BRN', ...)` may now return `false` for TINs that
+  used to validate. The library is unchanged.
+- Not needed in the library: the tax-exempt `TaxAmount` clarification, the
+  SSL certificate renewal, the exchange-rate rule (`createDocument()` is
+  MYR-only), and the Hectare unit (`createDocument()` sends `C62`; `HAR` is
+  accepted by the validator).
+
 ### Changed
+- **PHP requirement (behaviour change)**: `require.php` raised from `>=7.1.0`
+  to `>=8.1.0`. CI runs on PHP 8.2, 8.3 and 8.4.
 - **Stricter local validation (behaviour change)**: `createDocument()` and
   `submitDocuments()` (JSON) now enforce the LHDN field rules (Production
   15 Aug / 24 Oct 2026) through the new `DocumentFieldRulesValidator`. These

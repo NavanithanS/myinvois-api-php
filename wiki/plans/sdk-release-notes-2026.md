@@ -1,7 +1,7 @@
 ---
 tags: [plan, sdk, release-notes, validation, svdp]
-updated: 2026-11-04
-status: approved — not started
+updated: 2026-11-05
+status: done
 target_release: 1.2.0
 ---
 
@@ -10,6 +10,29 @@ target_release: 1.2.0
 Source: https://sdk.myinvois.hasil.gov.my/sdk-1-0-release/ (reviewed 2026-11-04, latest entry 25 Sep 2026).
 Today's state: master at `9752a52`, 217 tests green, CI on PHP 8.2–8.4, last tag `1.1.5`.
 Unreleased on master already: `require.php` raised `>=7.1.0` → `>=8.1.0` (commit `be9f02a`).
+
+## Outcome (2026-11-05)
+
+Implemented on branch `feat/sdk-2026-updates`, one commit per phase (0–5). Tests went from 217 to 378. PHPStan errors went from 396 to 392, with none added in touched files. Release 1.2.0 is **not tagged**; the maintainer approves it separately.
+
+Verification against the official SDK (2026-11-05), and where it changed the plan:
+
+| "Verify" item | Finding | Effect |
+|---------------|---------|--------|
+| UBL paths | Invoice v1.1 spec confirms every path in the Phase 3 table | as planned |
+| Incoterms | `cac:AdditionalDocumentReference[4]/cbc:ID` (**not** `Delivery`). In the SDK sample it is the reference with no `DocumentType` (`"CIF"`) | validator matches the reference without a `DocumentType`, not by position |
+| SVDP document types | `/types/` lists 1.2 and 1.3 for **all 8** types (incl. self-billed). 1.2 = v1.0 structure without signature, 1.3 = v1.1 with signature | added for the 4 types `Config` models; self-billed isn't modelled |
+| Unit list | `/files/UnitTypes.json`: 2162 codes, including `HAR` | new `UnitTypeValidator` generated from it |
+| Release-note wording | The notes don't name `taxpayerName`/`fileType`/`typeVersionNumber`; the API reference pages (10-search-taxpayer-tin, 07/08-get-document[-details]) do | names as planned. `fileType` is allowed only with idType+idValue, matching the SDK's listed combinations |
+
+Deviations / extra findings:
+
+- **Existing code lists were stale.** `CurrencyValidator` had 40 of the SDK's 180 currencies, and `CountryValidator` lacked `CRM`/`SCT`. Reusing them as the plan said would have rejected valid documents, so both were regenerated from the SDK JSON.
+- **`submitDocuments()` minify was lossy.** Decode+encode turned 25-digit amounts into exponent form. It was replaced with a whitespace-only minify (`Support\UblJson`). The plan's suggested `number_format` approach was dropped because it would send amounts as JSON strings. `UblJson::encode()` expands exponent literals instead.
+- `*_SUPPORTED_VERSIONS` constants were **not** extended. SVDP is added inside `isVersionSupported()` with the date check, so direct `in_array` users can't bypass the 31 Dec 2027 cutoff.
+- `createDocument()` now validates (state, version, issue date, field rules) **before** authenticating or reading the certificate.
+- State 17 in the shared validator is applied per address. It is allowed for MYS only on consolidated e-Invoices; non-MYS addresses take free text up to 50 characters.
+- The SVDP earliest-issue-date guard (2024-08-01) applies to `createDocument()` only. The official 1.2 sample is dated 2024-07-23, and the real earliest date depends on the taxpayer's phase.
 
 ## Decisions (agreed with the maintainer, 2026-11-04)
 
