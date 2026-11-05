@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Validation\DocumentFieldRulesValidator`, `Validation\UnitTypeValidator`
   (SDK unit list, including Hectare `HAR`), and `Support\UblJson`
   (exponent-free encode, lossless minify).
+- **SVDP (e-Invoice Voluntary Disclosure Programme)**: versions `1.2`
+  (unsigned) and `1.3` (signed) are accepted until 31 Dec 2027 (Malaysia
+  time) via `Config::isVersionSupported()`, `Config::isSvdpActive()` and
+  `Config::isSvdpVersion()`. `createDocument()` accepts `documentVersion`
+  (`1.1` default, or `1.3`) and, for 1.3 only, a backdated `issueDate` /
+  `issueTime` (≥ 2024-08-01, not in the future). `submitDocuments()` and
+  `submitDocument()` reject 1.2 documents that carry a signature, 1.3
+  documents without one, and both once the programme has ended.
+- `MyInvoisClient::setClock(callable)` to inject the current time.
 - `searchDocuments()` accepts a `classificationCode` filter, as a
   comma-separated string or an array of 3-digit codes (LHDN, 25 Sep 2026).
 - `getDocument()` / `getDocumentDetails()` return `typeVersionNumber`

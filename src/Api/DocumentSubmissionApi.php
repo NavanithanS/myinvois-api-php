@@ -10,6 +10,7 @@ use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Http\ApiClient;
 use Nava\MyInvois\Support\UblJson;
 use Nava\MyInvois\Validation\DocumentFieldRulesValidator;
+use Nava\MyInvois\Validation\SvdpValidator;
 use Nava\MyInvois\Traits\RateLimitingTrait;
 use Psr\Log\LoggerInterface;
 use Webmozart\Assert\Assert;
@@ -115,7 +116,7 @@ trait DocumentSubmissionApi
         $version = $version ?? Config::INVOICE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (!Config::isVersionSupported('invoice', $version)) {
+        if (!Config::isVersionSupported('invoice', $version, $this->now())) {
             throw new ValidationException('Unsupported document version');
         }
 
@@ -202,7 +203,8 @@ trait DocumentSubmissionApi
     }
 
     /**
-     * Apply DocumentFieldRulesValidator to every JSON document, collecting all
+     * Apply DocumentFieldRulesValidator and the SVDP rules (1.2 unsigned / 1.3
+     * signed, only until 31 Dec 2027) to every JSON document, collecting all
      * violations (keyed "documents[i].<UBL path>") into one ValidationException.
      *
      * @param  array<int, array<string, mixed>>  $documents
@@ -212,10 +214,21 @@ trait DocumentSubmissionApi
     private function validateDocumentFieldRules(array $documents): void
     {
         $validator = new DocumentFieldRulesValidator();
+        $svdp = new SvdpValidator();
+        $now = $this->now();
         $errors = [];
         foreach (array_values($documents) as $index => $document) {
-            if (is_string($document['document'] ?? null)) {
-                $errors += $validator->getViolations($document['document'], sprintf('documents[%d].', $index));
+            if (! is_string($document['document'] ?? null)) {
+                continue;
+            }
+            $prefix = sprintf('documents[%d].', $index);
+            $errors += $validator->getViolations($document['document'], $prefix);
+
+            $decoded = json_decode($document['document'], true);
+            if (is_array($decoded)) {
+                foreach ($svdp->getViolations($decoded, $now, $prefix) as $path => $messages) {
+                    $errors[$path] = array_merge($errors[$path] ?? [], $messages);
+                }
             }
         }
 
@@ -472,7 +485,7 @@ trait DocumentSubmissionApi
         $version = $version ?? Config::CREDIT_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (!Config::isVersionSupported('credit_note', $version)) {
+        if (!Config::isVersionSupported('credit_note', $version, $this->now())) {
             throw new ValidationException('Unsupported credit note version');
         }
 
@@ -492,7 +505,7 @@ trait DocumentSubmissionApi
         $version = $version ?? Config::DEBIT_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (!Config::isVersionSupported('debit_note', $version)) {
+        if (!Config::isVersionSupported('debit_note', $version, $this->now())) {
             throw new ValidationException('Unsupported debit note version');
         }
 

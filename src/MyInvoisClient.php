@@ -29,6 +29,7 @@ use Nava\MyInvois\Traits\UuidValidationTrait;
 use Nava\MyInvois\Support\UblJson;
 use Nava\MyInvois\Validation\DocumentFieldRulesValidator;
 use Nava\MyInvois\Validation\StateCodeValidator;
+use Nava\MyInvois\Validation\SvdpValidator;
 use Webmozart\Assert\Assert;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
@@ -109,6 +110,9 @@ class MyInvoisClient
     private $supplierMsicCode;
     private $supplierMsicDescription;
     private $x509cert;
+
+    /** @var (callable(): \DateTimeInterface)|null */
+    private $clock = null;
 
     protected $cache;
     private $clientId;
@@ -390,7 +394,28 @@ class MyInvoisClient
         $this->supplierMsicCode = $request->input('supplierMsicCode') ?: '68109';
         $this->supplierMsicDescription = $request->input('supplierMsicDescription') ?: 'Real estate activities with own or leased property n.e.c.';
 
-        $this->utcTime = Carbon::now('UTC')->toTimeString() . "Z";
+        $now = $this->now();
+        $documentVersion = $this->resolveCreateDocumentVersion($request->input('documentVersion'), $now);
+
+        $this->utcTime = $now->format('H:i:s') . 'Z';
+        $issueDate = $now->format('Y-m-d');
+        $issueTime = $this->utcTime;
+
+        $issueDateInput = $request->input('issueDate');
+        $issueTimeInput = $request->input('issueTime');
+        if (($issueDateInput !== null && $issueDateInput !== '') || ($issueTimeInput !== null && $issueTimeInput !== '')) {
+            if ($documentVersion !== Config::SVDP_SIGNED_VERSION) {
+                throw new ValidationException('Invalid issue date', [
+                    'issueDate' => ['A custom issueDate/issueTime is only allowed for SVDP documents (documentVersion 1.3); otherwise the current UTC time is used'],
+                ]);
+            }
+            [$issueDate, $issueTime] = (new SvdpValidator())->resolveIssueDateTime(
+                is_scalar($issueDateInput) ? (string) $issueDateInput : '',
+                is_scalar($issueTimeInput) ? (string) $issueTimeInput : null,
+                $now
+            );
+        }
+
         $this->document = [
             "_D" => "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
             "_A" => "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
@@ -398,9 +423,9 @@ class MyInvoisClient
             "Invoice" => [
                 [
                     "ID" => [["_" => $this->invoiceNo]],
-                    "IssueDate" => [["_" => Carbon::now('UTC')->toDateString()]],
-                    "IssueTime" => [["_" => $this->utcTime]],
-                    "InvoiceTypeCode" => [["_" => "01", "listVersionID" => "1.1"]],
+                    "IssueDate" => [["_" => $issueDate]],
+                    "IssueTime" => [["_" => $issueTime]],
+                    "InvoiceTypeCode" => [["_" => "01", "listVersionID" => $documentVersion]],
                     "DocumentCurrencyCode" => [["_" => "MYR"]],
                     "TaxCurrencyCode" => [["_" => "MYR"]],
                     // "InvoicePeriod" => [
@@ -559,7 +584,7 @@ class MyInvoisClient
                     "Id" => "id-xades-signed-props",
                     "SignedSignatureProperties" => [
                         [
-                            "SigningTime" => [["_" => Carbon::now('UTC')->toDateString() . 'T' . $this->utcTime]],
+                            "SigningTime" => [["_" => $now->format('Y-m-d') . 'T' . $this->utcTime]],
                             "SigningCertificate" => [
                                 [
                                     "Cert" => [
@@ -692,7 +717,75 @@ class MyInvoisClient
         $updatedDocument = UblJson::encode($this->document, JSON_UNESCAPED_SLASHES);
         // dd($updatedDocument);
 
-        return $this->submitDocument($updatedDocument, $authResponse);
+        return $this->submitDocument($updatedDocument, $authResponse, $documentVersion);
+    }
+
+    /**
+     * Resolve the documentVersion input of createDocument().
+     *
+     * createDocument() always signs, so only the signed versions 1.1 (default)
+     * and SVDP 1.3 are accepted. Unsigned 1.0 / SVDP 1.2 must go through
+     * submitDocuments().
+     *
+     * @param  mixed  $input
+     *
+     * @throws ValidationException
+     */
+    private function resolveCreateDocumentVersion($input, \DateTimeInterface $now): string
+    {
+        $version = is_scalar($input) && trim((string) $input) !== '' ? trim((string) $input) : Config::INVOICE_CURRENT_VERSION;
+
+        if (in_array($version, ['1.0', Config::SVDP_UNSIGNED_VERSION], true)) {
+            throw new ValidationException('Unsupported document version', [
+                'documentVersion' => [sprintf('Version %s is for unsigned documents, but createDocument() always signs; use submitDocuments() for version %s', $version, $version)],
+            ]);
+        }
+
+        if (!in_array($version, [Config::INVOICE_CURRENT_VERSION, Config::SVDP_SIGNED_VERSION], true)) {
+            throw new ValidationException('Unsupported document version', [
+                'documentVersion' => [sprintf('Version %s is not supported; use 1.1 or SVDP 1.3', $version)],
+            ]);
+        }
+
+        if (!Config::isVersionSupported('invoice', $version, $now)) {
+            throw new ValidationException('Unsupported document version', [
+                'documentVersion' => [sprintf('SVDP version %s can only be used until %s', $version, Config::SVDP_END_DATE)],
+            ]);
+        }
+
+        return $version;
+    }
+
+    /**
+     * Inject a clock (returns a DateTimeInterface) for date-dependent rules
+     * such as the SVDP window. Pass null to restore the default clock.
+     *
+     * @param  (callable(): \DateTimeInterface)|null  $clock
+     */
+    public function setClock(?callable $clock): self
+    {
+        $this->clock = $clock;
+
+        return $this;
+    }
+
+    /**
+     * Current UTC time from the injected clock, else Carbon (so Carbon::setTestNow()
+     * applies), else the system clock.
+     */
+    protected function now(): \DateTimeImmutable
+    {
+        if ($this->clock !== null) {
+            $time = ($this->clock)();
+
+            return \DateTimeImmutable::createFromInterface($time)->setTimezone(new \DateTimeZone('UTC'));
+        }
+
+        if (class_exists(Carbon::class)) {
+            return \DateTimeImmutable::createFromInterface(Carbon::now('UTC'));
+        }
+
+        return new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
     }
 
     public function submitDocument($updatedDocument, $authResponse, ?string $version = null)
@@ -725,8 +818,17 @@ class MyInvoisClient
         $version = $version ?? Config::INVOICE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (!Config::isVersionSupported('invoice', $version)) {
+        if (!Config::isVersionSupported('invoice', $version, $this->now())) {
             throw new ValidationException('Unsupported document version');
+        }
+
+        // SVDP: 1.2 must be unsigned, 1.3 signed, and both only while the programme runs
+        $decoded = is_string($updatedDocument) ? json_decode($updatedDocument, true) : null;
+        if (is_array($decoded)) {
+            $svdpErrors = (new SvdpValidator())->getViolations($decoded, $this->now());
+            if ($svdpErrors !== []) {
+                throw new ValidationException('Invalid SVDP document', $svdpErrors, 422);
+            }
         }
 
         // Set version in document
@@ -1370,7 +1472,7 @@ class MyInvoisClient
         $version = $version ?? Config::DEBIT_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (!in_array($version, Config::DEBIT_NOTE_SUPPORTED_VERSIONS)) {
+        if (!Config::isVersionSupported('debit_note', $version, $this->now())) {
             throw new ValidationException('Unsupported debit note version');
         }
 
@@ -1401,7 +1503,7 @@ class MyInvoisClient
         $version = $version ?? Config::REFUND_NOTE_CURRENT_VERSION;
 
         // Validate version is supported
-        if (!Config::isVersionSupported('refund_note', $version)) {
+        if (!Config::isVersionSupported('refund_note', $version, $this->now())) {
             throw new ValidationException('Unsupported refund note version');
         }
 

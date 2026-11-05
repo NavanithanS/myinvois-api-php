@@ -111,12 +111,42 @@ A submission can **partially succeed** — some documents accepted, others rejec
 
 | Document type | `invoiceTypeCode` | Current version | Supported versions |
 |-------------|------------------|----------------|--------------------|
-| Invoice | `01` | `1.1` | `1.0`, `1.1` |
-| Credit Note | `02` | `1.1` | `1.0`, `1.1` |
-| Debit Note | `03` | `1.1` | `1.0`, `1.1` |
-| Refund Note | `04` | `1.1` | `1.0`, `1.1` |
+| Invoice | `01` | `1.1` | `1.0`, `1.1` (+ SVDP `1.2`, `1.3` until 31 Dec 2027) |
+| Credit Note | `02` | `1.1` | `1.0`, `1.1` (+ SVDP) |
+| Debit Note | `03` | `1.1` | `1.0`, `1.1` (+ SVDP) |
+| Refund Note | `04` | `1.1` | `1.0`, `1.1` (+ SVDP) |
 
-Use `Config::isVersionSupported($docType, $version)` to validate before submission.
+Use `Config::isVersionSupported($docType, $version, ?$now)` to validate before submission. The `*_SUPPORTED_VERSIONS` constants list only the regular versions. SVDP versions are added inside `isVersionSupported()` with the date check, so code that does `in_array(..., *_SUPPORTED_VERSIONS)` never accepts SVDP after the programme ends.
+
+Self-billed types (`11`–`14`) also have SVDP 1.2/1.3 in the SDK, but `Config` doesn't model them yet.
+
+## SVDP: Voluntary Disclosure Programme (since 1.2.0)
+
+Source: SDK release note 8 Jul 2026 and https://sdk.myinvois.hasil.gov.my/types/.
+
+| Version | Structure | Signature | Usable |
+|---------|-----------|-----------|--------|
+| `1.2` | same as 1.0 | **none** (no `UBLExtensions`/`Signature`) | until **31 Dec 2027** |
+| `1.3` | same as 1.1 | **required** | until **31 Dec 2027** |
+
+The SDK lists both versions for all 8 document types, self-billed included. During SVDP the issue date/time may be **backdated** to the taxpayer's phased mandatory implementation date (earliest **1 Aug 2024**).
+
+Constants: `Config::SVDP_VERSIONS`, `SVDP_EARLIEST_ISSUE_DATE = '2024-08-01'`, `SVDP_END_DATE = '2027-12-31'`. The end date is inclusive and evaluated in `Asia/Kuala_Lumpur` (`Config::isSvdpActive($now)`), so the programme ends at 2027-12-31T16:00:00Z.
+
+**`createDocument()`** always signs, so it accepts `documentVersion` `1.1` (default) or `1.3`. `1.0`/`1.2` throw and point you to `submitDocuments()`. `issueDate` (`YYYY-MM-DD`) and `issueTime` (`HH:MM:SS[Z]`, UTC, defaults to now) are accepted **only with 1.3**. The issue date must be ≥ 2024-08-01, not in the future, and the programme must still be active. `SigningTime` stays the real time.
+
+```php
+$client->createDocument(new Request([... , 'documentVersion' => '1.3', 'issueDate' => '2025-03-15', 'issueTime' => '09:30:00Z']));
+```
+
+**`submitDocuments()` / `submitDocument()`**: for JSON documents whose `InvoiceTypeCode@listVersionID` is 1.2/1.3, `SvdpValidator` rejects:
+- 1.2 that carries `UBLExtensions` or `Signature`
+- 1.3 that lacks either one
+- either version once the programme has ended
+
+Errors are keyed `documents[i].Invoice.InvoiceTypeCode@listVersionID` and are reported together with the field-rule violations. The library does **not** check the 2024-08-01 earliest date on this path. The official 1.2 sample has `IssueDate` 2024-07-23, and the real earliest date depends on the taxpayer's phase. LHDN enforces it.
+
+**Clock**: `MyInvoisClient::setClock(callable)` overrides "now". Otherwise the client uses `Carbon::now('UTC')` when Carbon is installed (so `Carbon::setTestNow()` works), or the system clock.
 
 ## Retry Logic
 

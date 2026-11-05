@@ -84,6 +84,12 @@ If you build UBL JSON yourself, never `json_encode()` floats ≥ 1e15 or < 1e-4 
 
 ---
 
+## SVDP Window Ends 31 Dec 2027
+
+SVDP versions 1.2/1.3 stop being accepted after 31 Dec 2027 (Malaysia time). After that, `Config::isVersionSupported()` returns false for them, and `createDocument()`/`submitDocuments()` reject them locally. **Remove the SVDP code and constants in the first release after that date.** Tests freeze the clock, so CI won't fail when the date passes. See [[api/document-submission#svdp-voluntary-disclosure-programme-since-120]].
+
+---
+
 ## Duplicate Submission Window
 
 Resubmitting the same `codeNumber` within **10 minutes** returns HTTP 422 `DuplicateSubmission`. This is a server-side platform constraint — cannot be bypassed. You must either wait 10 minutes or use a different `codeNumber`.

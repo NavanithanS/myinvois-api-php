@@ -18,9 +18,9 @@ updated: 2026-11-05
 
 ## Document Versions
 
-Current version: `1.1`. Supported: `1.0`, `1.1` for all document types.
+Current version: `1.1`. Supported: `1.0`, `1.1` for all document types, plus SVDP `1.2` (unsigned) / `1.3` (signed) until 31 Dec 2027. See [[api/document-submission#svdp-voluntary-disclosure-programme-since-120]].
 
-`Config::isVersionSupported($docType, $version)` validates before submission.
+`Config::isVersionSupported($docType, $version, ?$now)` validates before submission.
 
 ## Document Statuses
 
