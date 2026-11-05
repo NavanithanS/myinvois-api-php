@@ -39,7 +39,8 @@ trait TaxpayerApi
 
     private const ID_PATTERNS = [
         'NRIC' => '/^\d{12}$/',
-        'PASSPORT' => '/^[A-Z]\d{8}$/',
+        // PASSPORT: max 12 letters/digits (SDK release note 6 Aug 2026, Production 24 Oct 2026)
+        'PASSPORT' => '/^[A-Za-z0-9]{1,12}$/',
         'BRN' => '/^\d{12}$/',
         'ARMY' => '/^\d{12}$/',
     ];
@@ -191,7 +192,7 @@ trait TaxpayerApi
         if (!$pattern || !preg_match($pattern, $idValue)) {
             $errorMessages = [
                 'NRIC' => 'NRIC must be 12 digits',
-                'PASSPORT' => 'Passport number must be a letter followed by 8 digits',
+                'PASSPORT' => 'Passport number must be 1-12 letters or digits',
                 'BRN' => 'Business registration number must be 12 digits',
                 'ARMY' => 'Army number must be 12 digits',
             ];
@@ -200,18 +201,6 @@ trait TaxpayerApi
                 ? 'Invalid passport number format'
                 : ($normalizedType === 'ARMY' ? 'Invalid army number format' : sprintf('Invalid %s format', $normalizedType));
             throw new ValidationException($message, ['idValue' => [$errorMessages[$normalizedType] ?? 'Invalid format']], 422);
-        }
-
-        // Additional validation for specific types
-        if ($normalizedType === 'PASSPORT') {
-            $letter = substr($idValue, 0, 1);
-            if (!ctype_upper($letter)) {
-                throw new ValidationException(
-                    'Invalid passport number format',
-                    ['idValue' => ['Passport number must start with an uppercase letter']],
-                    422
-                );
-            }
         }
     }
 

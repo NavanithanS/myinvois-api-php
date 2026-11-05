@@ -1,6 +1,6 @@
 ---
 tags: [domain, tax, codes, malaysia]
-updated: 2026-11-04
+updated: 2026-11-05
 ---
 
 # Malaysian Tax Codes & Reference Data
@@ -82,7 +82,7 @@ Used in TIN validation and party identification `schemeID`:
 | Type | Regex pattern | Notes |
 |------|--------------|-------|
 | `NRIC` | `/^\d{12}$/` | Malaysian identity card |
-| `PASSPORT` | `/^[A-Z]\d{8}$/` | Uppercase letter + 8 digits — e.g. `A12345678` |
+| `PASSPORT` | `/^[A-Za-z0-9]{1,12}$/` | 1–12 letters/digits — LHDN max 12 chars from 24 Oct 2026 (release note 6 Aug 2026). Previously `/^[A-Z]\d{8}$/` |
 | `BRN` | `/^\d{12}$/` | Business Registration Number |
 | `ARMY` | `/^\d{12}$/` | Army ID |
 
@@ -110,7 +110,16 @@ Used in `PostalAddress.CountrySubentityCode`:
 | `16` | WP Putrajaya / Putrajaya |
 | `17` | Not Applicable / NA |
 
-State input handling in `createDocument()`: if input is already a 2-digit numeric string, it's used directly. Otherwise, a name-to-code lookup runs with fallback to `"17"`. Both `"Penang"` and `"Pulau Pinang"` map to `"07"`.
+### State code 17 rule (since 30 Apr 2026)
+
+LHDN only accepts `17` (Not Applicable) for **consolidated e-Invoices** (buyer TIN `EI00000000010`) or **addresses outside Malaysia** (non-MYS parties may also send a free-text state name, ≤ 50 chars).
+
+State input handling in `createDocument()` (`MyInvoisClient::resolveStateCode()`), since 1.2.0:
+
+- 1–2 digit numeric input → zero-padded and checked against `01`–`17`.
+- Otherwise a trimmed, case-insensitive name/alias lookup (`stateMapping` + `StateCodeValidator` aliases, e.g. `Penang`, `Pulau Pinang`, `Wilayah Persekutuan Labuan`).
+- Missing/unknown state → `ValidationException` keyed `buyerState`/`supplierState`. **There is no silent fallback to `17` any more** (pre-1.2.0 it defaulted to `17`, which LHDN now rejects).
+- `17` / `Not Applicable` / `NA` is accepted (for either party) only when buyer TIN is `EI00000000010`. Both parties are hard-coded `MYS` in `createDocument()`, so the non-Malaysia case does not arise there.
 
 ## MSIC Codes
 

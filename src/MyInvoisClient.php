@@ -26,6 +26,7 @@ use Nava\MyInvois\Traits\DateValidationTrait;
 use Nava\MyInvois\Traits\LoggerTrait;
 use Nava\MyInvois\Traits\RateLimitingTrait;
 use Nava\MyInvois\Traits\UuidValidationTrait;
+use Nava\MyInvois\Validation\StateCodeValidator;
 use Webmozart\Assert\Assert;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
@@ -122,6 +123,12 @@ class MyInvoisClient
     public const IDENTITY_PRODUCTION_URL = 'https://api.myinvois.hasil.gov.my';
 
     public const IDENTITY_SANDBOX_URL = 'https://preprod-api.myinvois.hasil.gov.my';
+
+    /** General-public TIN used by consolidated e-Invoices. */
+    public const CONSOLIDATED_BUYER_TIN = 'EI00000000010';
+
+    /** State code meaning "Not Applicable". */
+    public const NOT_APPLICABLE_STATE_CODE = '17';
 
     // Intermediary helpers
     public function onBehalfOf(string $tin): self
@@ -278,6 +285,64 @@ class MyInvoisClient
     }
 
     /**
+     * Resolve a state input (2-digit code or state name) to an LHDN state code.
+     *
+     * Accepts codes "01"–"17" (a single digit is zero-padded) or a state name /
+     * common alias, matched case-insensitively after trimming. Code "17"
+     * (Not Applicable) is only accepted when $allowNotApplicable is true.
+     *
+     * @param  mixed  $input  Raw request value
+     * @param  string  $field  Request field name, used as the error key
+     *
+     * @throws ValidationException If the state is missing, unknown, or 17 is not allowed
+     */
+    private function resolveStateCode($input, string $field, bool $allowNotApplicable): string
+    {
+        $raw = is_scalar($input) ? trim((string) $input) : '';
+        if ($raw === '') {
+            throw new ValidationException('Invalid state', [
+                $field => ['State is required (use a 2-digit LHDN state code or a Malaysian state name)'],
+            ]);
+        }
+
+        $validator = new StateCodeValidator();
+        $code = null;
+
+        if (preg_match('/^\d{1,2}$/', $raw) === 1) {
+            $candidate = str_pad($raw, 2, '0', STR_PAD_LEFT);
+            if (StateCodeValidator::getStates()[$candidate] ?? null) {
+                $code = $candidate;
+            }
+        } else {
+            foreach ($this->stateMapping as $name => $mapped) {
+                if (strcasecmp($name, $raw) === 0) {
+                    $code = $mapped;
+                    break;
+                }
+            }
+            $code = $code ?? $validator->getStateCode($raw);
+        }
+
+        if ($code === null) {
+            throw new ValidationException('Invalid state', [
+                $field => [sprintf('Unknown state "%s"; use a 2-digit LHDN state code (01-16) or a Malaysian state name', $raw)],
+            ]);
+        }
+
+        if ($code === self::NOT_APPLICABLE_STATE_CODE && !$allowNotApplicable) {
+            throw new ValidationException('Invalid state', [
+                $field => [sprintf(
+                    'State code 17 (Not Applicable) received as "%s" is only allowed for consolidated e-Invoices (buyer TIN %s) or non-Malaysian addresses',
+                    $raw,
+                    self::CONSOLIDATED_BUYER_TIN
+                )],
+            ]);
+        }
+
+        return $code;
+    }
+
+    /**
      * Get the portal base URL for shareable links.
      */
     protected function getPortalBaseUrl(): string
@@ -302,12 +367,11 @@ class MyInvoisClient
         $this->buyerAddress2 = $request->input('buyerAddress2');
         $this->buyerPostcode = $request->input('buyerPostcode');
         $this->buyerCity = $request->input('buyerCity');
-        $inputBuyerState = $request->input('buyerState');
-        if (is_numeric($inputBuyerState) && strlen($inputBuyerState) === 2) {
-            $this->buyerStateCode = $inputBuyerState;
-        } else {
-            $this->buyerStateCode = $this->stateMapping[$inputBuyerState] ?? '17';
-        }
+        // State code 17 ("Not Applicable") is only accepted by LHDN for consolidated
+        // e-Invoices (buyer TIN EI00000000010) or non-Malaysian parties (30 Apr 2026).
+        // Both parties are always MYS in createDocument(), so only the consolidated case applies.
+        $allowNotApplicableState = strtoupper(trim((string) $this->buyerTIN)) === self::CONSOLIDATED_BUYER_TIN;
+        $this->buyerStateCode = $this->resolveStateCode($request->input('buyerState'), 'buyerState', $allowNotApplicableState);
         $this->supplierIdType = $request->input('supplierIdType');
         $this->supplierTIN = $request->input('supplierTIN');
         $this->supplierIC = $request->input('supplierIC');
@@ -320,12 +384,7 @@ class MyInvoisClient
         $this->supplierAddress2 = $request->input('supplierAddress2');
         $this->supplierPostcode = $request->input('supplierPostcode');
         $this->supplierCity = $request->input('supplierCity');
-        $inputSupplierState = $request->input('supplierState');
-        if (is_numeric($inputSupplierState) && strlen($inputSupplierState) === 2) {
-            $this->supplierStateCode = $inputSupplierState;
-        } else {
-            $this->supplierStateCode = $this->stateMapping[$inputSupplierState] ?? '17';
-        }
+        $this->supplierStateCode = $this->resolveStateCode($request->input('supplierState'), 'supplierState', $allowNotApplicableState);
         $this->supplierMsicCode = $request->input('supplierMsicCode') ?: '68109';
         $this->supplierMsicDescription = $request->input('supplierMsicDescription') ?: 'Real estate activities with own or leased property n.e.c.';
 

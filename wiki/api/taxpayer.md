@@ -1,6 +1,6 @@
 ---
 tags: [api, taxpayer, tin, validation]
-updated: 2026-04-18
+updated: 2026-11-05
 ---
 
 # Taxpayer API
@@ -43,11 +43,11 @@ All validated locally before any network call:
 | Type | Pattern | Notes |
 |------|---------|-------|
 | `NRIC` | `/^\d{12}$/` | 12 digits |
-| `PASSPORT` | `/^[A-Z]\d{8}$/` | Uppercase letter + 8 digits e.g. `A12345678` |
+| `PASSPORT` | `/^[A-Za-z0-9]{1,12}$/` | 1–12 letters/digits (LHDN limit from 24 Oct 2026) |
 | `BRN` | `/^\d{12}$/` | Business Registration Number |
 | `ARMY` | `/^\d{12}$/` | Army ID |
 
-Passport additionally validates that the first character is uppercase (`ctype_upper`).
+Before 1.2.0 PASSPORT required `[A-Z]` + 8 digits and an uppercase first letter; that check was removed because LHDN now accepts any passport up to 12 characters.
 
 ### Result Caching
 

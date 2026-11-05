@@ -130,12 +130,11 @@ class TaxpayerApiTest extends TestCase
     /** @test */
     public function it_validates_passport_format(): void
     {
+        // Since 24 Oct 2026 PASSPORT is any 1-12 letters/digits (SDK release note 6 Aug 2026)
         $invalidPassports = [
-            '12345678', // No letter prefix
-            'AA12345678', // Multiple letters
-            'A1234567', // Too short
-            'A123456789', // Too long
-            '12A345678', // Letter in wrong position
+            'AB12345678901', // 13 chars - too long
+            'A-123', // Special character
+            'A 1234567', // Whitespace
         ];
 
         foreach ($invalidPassports as $passport) {
@@ -146,6 +145,25 @@ class TaxpayerApiTest extends TestCase
                 $this->assertStringContainsString('Invalid passport number format', $e->getMessage());
                 $this->assertArrayHasKey('idValue', $e->getErrors());
             }
+        }
+    }
+
+    /** @test */
+    public function it_accepts_passports_up_to_12_alphanumeric_characters(): void
+    {
+        foreach (['A12345678', 'K1234567', 'AB1234567890', '12345678', 'a1234567'] as $passport) {
+            $this->mockSuccessfulAuthentication();
+            $this->mockHandler->append(new Response(200, [], (string) json_encode(['valid' => true])));
+
+            $this->assertTrue(
+                $this->client->validateTaxpayerTin('C1234567890', 'PASSPORT', $passport, false),
+                'Expected passport to be accepted: ' . $passport
+            );
+
+            $query = [];
+            parse_str($this->getLastRequest()->getUri()->getQuery(), $query);
+            $this->assertSame('PASSPORT', $query['idType']);
+            $this->assertSame($passport, $query['idValue']);
         }
     }
 

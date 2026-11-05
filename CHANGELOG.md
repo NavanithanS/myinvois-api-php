@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **State code 17 (behaviour change)**: `createDocument()` no longer falls back
+  to state `17` (Not Applicable) for missing or unknown `buyerState` /
+  `supplierState`. It now throws `ValidationException` naming the received
+  value. `17` / `Not Applicable` / `NA` is accepted only for consolidated
+  e-Invoices (buyer TIN `EI00000000010`), matching the LHDN rule in force since
+  30 Apr 2026. State names are now trimmed and matched case-insensitively, and
+  single-digit codes are zero-padded.
+- **PASSPORT ID format**: TIN validation accepts any 1–12 letters/digits
+  (LHDN limit from 24 Oct 2026) instead of `[A-Z]` + 8 digits.
+
+---
+
 ## [1.1.5] - 2026-04-18
 
 ### Fixed
