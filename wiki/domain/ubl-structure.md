@@ -1,6 +1,6 @@
 ---
 tags: [domain, ubl, document-format]
-updated: 2026-04-18
+updated: 2026-11-05
 ---
 
 # UBL Document Structure
@@ -163,6 +163,38 @@ Line IDs are zero-padded 3-digit strings (`"001"`, `"002"`). Each line carries i
 ```
 
 **Legacy fallback** (no `lineItems` in request): single line, description "Electricity Charge", classification `"022"`, quantity 1, all amounts = `totalPay`.
+
+## LHDN Field Rules (enforced locally since 1.2.0)
+
+`src/Validation/DocumentFieldRulesValidator.php` checks the UBL JSON that `createDocument()` builds (before authenticating or signing) and every JSON document passed to `submitDocuments()`. XML is not checked. **All** violations come back in one `ValidationException`, keyed by path, e.g. `Invoice.ID`, `documents[2].Invoice.InvoiceLine[1].Price.PriceAmount` (`[0]` is omitted from paths). Only fields that are present are checked, and `UBLExtensions`/`Signature` are skipped. Documents without an `Invoice` root are ignored.
+
+Sources: SDK release notes 3 Jul 2026 (Production 15 Aug 2026), 30 Apr 2026, 6 Aug 2026 (Production 24 Oct 2026). Paths are from the Invoice v1.1 spec.
+
+| Field | UBL path | Rule |
+|-------|----------|------|
+| e-Invoice Code/Number | `Invoice.ID` | ≤ 50 |
+| Supplier bank account | `PaymentMeans.PayeeFinancialAccount.ID` | ≤ 150 |
+| Certified Exporter no. | supplier `AdditionalAccountID[@schemeAgencyName=CertEX]` (case-insensitive) | ≤ 300 |
+| Incoterms | `AdditionalDocumentReference.ID`. The spec says `[4]`, but the entry is identified as **the reference with no `DocumentType`** (as in the SDK sample: `{"ID":[{"_":"CIF"}]}`). It is **not** under `Delivery` | ≤ 3 |
+| Frequency of Billing | `InvoicePeriod.Description` | ≤ 50 |
+| Business activity desc. | supplier `IndustryClassificationCode@name` | ≤ 300 |
+| Payment terms | `PaymentTerms.Note` | ≤ 300 |
+| PrePayment reference | `PrepaidPayment.ID` | ≤ 150 |
+| Dates | any key ending `Date` | `YYYY-MM-DD` and a real calendar date (`N/A` is rejected) |
+| State | every `PostalAddress.CountrySubentityCode` | MYS address → `01`–`17`, and `17` only if buyer TIN is `EI00000000010`. Non-MYS → ≤ 50 |
+| Postcode | every `PostalAddress.PostalZone` (party + delivery) | MYS → ≤ 5. Non-MYS → ≤ 50 |
+| Unit | `InvoiceLine.InvoicedQuantity@unitCode` | in `UnitTypeValidator` (2162 SDK codes, incl. `HAR` Hectare), exact case |
+| Country / currency / payment mode / tax type | `Country.IdentificationCode`, `DocumentCurrencyCode`/`TaxCurrencyCode`/every `@currencyID`, `PaymentMeansCode`, `TaxCategory.ID` | exact match on the SDK code lists |
+| Amounts | every key ending `Amount`, plus `Percent` | plain decimal, **no exponent**, ≤ **26 digits** (sign and `.` not counted) |
+| PASSPORT IDs | `PartyIdentification.ID[@schemeID=PASSPORT]` | ≤ 12 |
+
+Code lists were regenerated on 2026-11-05 from the SDK JSON files (`/files/CurrencyCodes.json`: 180, `CountryCodes.json`: 253 incl. `CRM`/`SCT`, `UnitTypes.json`: 2162). Before that, `CurrencyValidator` had only 40 currencies.
+
+### Amounts and JSON encoding
+
+- PHP `json_encode()` writes floats ≥ 1e15 as `1.0e+15`, which LHDN rejects. `createDocument()` encodes through `Support\UblJson::encode()`, which rewrites any exponent literal as a plain decimal. The JSON is otherwise identical.
+- `submitDocuments()` used to minify by `json_decode`+`json_encode`. That turned `12345678901234567890123.45` into `1.2345678901234568e+22` and could change escapes, so it no longer matched the caller's `documentHash`. Since 1.2.0 it uses `UblJson::minify()`, which only strips whitespace outside strings.
+- The validator reads the **raw text** (`UblJson::decodePreservingNumbers()`), so exponent use and digit counts are judged exactly as written.
 
 ## Related
 

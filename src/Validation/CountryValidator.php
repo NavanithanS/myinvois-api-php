@@ -9,7 +9,14 @@ use Nava\MyInvois\Exception\ValidationException;
  */
 class CountryValidator
 {
-    /** @var array Mapping of country codes to names */
+    /**
+     * Mapping of country codes to names.
+     *
+     * Source: LHDN MyInvois SDK https://sdk.myinvois.hasil.gov.my/files/CountryCodes.json
+     * (253 codes, fetched 2026-11-05; includes CRM/SCT added 8 Jul 2025).
+     *
+     * @var array<string, string>
+     */
     private const COUNTRIES = [
         'ABW' => 'ARUBA',
         'AFG' => 'AFGHANISTAN',
@@ -18,7 +25,7 @@ class CountryValidator
         'ALA' => 'ALAND ISLANDS',
         'ALB' => 'ALBANIA',
         'AND' => 'ANDORA',
-        'ANT' => 'NETHERLANDS ANTILLES',
+        'ANT' => 'NETHERLANDS ANTILLE',
         'ARE' => 'UNITED ARAB EMIRATES',
         'ARG' => 'ARGENTINA',
         'ARM' => 'ARMENIA',
@@ -56,15 +63,16 @@ class CountryValidator
         'CHE' => 'SWITZERLAND',
         'CHL' => 'CHILE',
         'CHN' => 'CHINA',
-        'CIV' => 'COTE D’IVOIRE',
+        'CIV' => 'COTE D\'IVOIRE',
         'CMR' => 'CAMEROON',
         'COD' => 'CONGO, THE DEMOCRATIC REPUBLIC',
         'COG' => 'CONGO',
         'COK' => 'COOK ISLANDS',
         'COL' => 'COLOMBIA',
         'COM' => 'COMOROS',
-        'CPV' => 'CAPE VERDE',
+        'CPV' => 'CABO VERDE',
         'CRI' => 'COSTA RICA',
+        'CRM' => 'CRIMEA',
         'CUB' => 'CUBA',
         'CUW' => 'CURACAO',
         'CXR' => 'CHRISTMAS ISLANDS',
@@ -204,6 +212,7 @@ class CountryValidator
         'RUS' => 'RUSSIAN FEDERATION (USSR)',
         'RWA' => 'RWANDA',
         'SAU' => 'SAUDI ARABIA',
+        'SCT' => 'SCOTLAND',
         'SDN' => 'SUDAN',
         'SEN' => 'SENEGAL',
         'SGP' => 'SINGAPORE',
@@ -224,7 +233,7 @@ class CountryValidator
         'SVN' => 'SLOVENIA',
         'SWE' => 'SWEDEN',
         'SWZ' => 'ESWATINI, KINGDOM OF (SWAZILAND)',
-        'SXM' => 'SINT MAARTEN (DUTCH PART)',
+        'SXM' => 'SINT MAARTEN',
         'SYC' => 'SEYCHELLES',
         'SYR' => 'SYRIAN ARAB REPUBLIC',
         'TCA' => 'TURKS AND CAICOS ISLANDS',

@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `Validation\DocumentFieldRulesValidator`, `Validation\UnitTypeValidator`
+  (SDK unit list, including Hectare `HAR`), and `Support\UblJson`
+  (exponent-free encode, lossless minify).
 - `searchDocuments()` accepts a `classificationCode` filter, as a
   comma-separated string or an array of 3-digit codes (LHDN, 25 Sep 2026).
 - `getDocument()` / `getDocumentDetails()` return `typeVersionNumber`
@@ -24,6 +27,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Its behaviour is unchanged.
 
 ### Changed
+- **Stricter local validation (behaviour change)**: `createDocument()` and
+  `submitDocuments()` (JSON) now enforce the LHDN field rules (Production
+  15 Aug / 24 Oct 2026) through the new `DocumentFieldRulesValidator`. These
+  cover field lengths, `YYYY-MM-DD` dates, state/postcode rules per address
+  country, and the unit, country, currency, payment mode and tax type code
+  lists. Amounts must have no scientific notation and at most 26 digits.
+  PASSPORT IDs are limited to 12 characters. All violations are reported in one
+  `ValidationException` keyed by UBL path. Documents that LHDN would reject
+  now fail before any HTTP call.
+- `createDocument()` validates before authenticating or reading the signing
+  certificate, and never writes amounts in exponent form.
+- `submitDocuments()` minifies JSON losslessly (whitespace only). It used to
+  re-encode, which turned large amounts into exponent form and changed escapes.
+- `CurrencyValidator` / `CountryValidator` now use the SDK code lists
+  (180 currencies, up from 40; adds `CRM` Crimea and `SCT` Scotland; `CPV` is
+  renamed Cabo Verde).
 - **State code 17 (behaviour change)**: `createDocument()` no longer falls back
   to state `17` (Not Applicable) for missing or unknown `buyerState` /
   `supplierState`. It now throws `ValidationException` naming the received

@@ -1,6 +1,6 @@
 ---
 tags: [api, submission, documents]
-updated: 2026-04-18
+updated: 2026-11-05
 ---
 
 # Document Submission
@@ -54,6 +54,12 @@ $client->submitDocuments([
     ]
 ]);
 ```
+
+### Local field-rule validation (since 1.2.0)
+
+Both paths run `DocumentFieldRulesValidator`. `createDocument()` runs it on the built UBL before authenticating or loading the certificate. `submitDocuments()` runs it on every JSON document, after the structural checks and before any HTTP call. All violations come back in one `ValidationException`. See [[domain/ubl-structure#lhdn-field-rules-enforced-locally-since-120]].
+
+`submitDocuments()` minifies JSON losslessly (whitespace only, see [[domain/ubl-structure#amounts-and-json-encoding]]).
 
 ## Request Payload Format
 

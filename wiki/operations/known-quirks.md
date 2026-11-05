@@ -1,6 +1,6 @@
 ---
 tags: [operations, quirks, gotchas, decisions]
-updated: 2026-04-18
+updated: 2026-11-05
 ---
 
 # Known Quirks & Non-Obvious Behaviors
@@ -64,6 +64,23 @@ Two entirely different submission paths:
 | Specific to the invoice flow | General-purpose, supports JSON and XML |
 
 Also note: `DocumentSubmissionApi::submitDocument(ApiClient $apiClient, array $document)` takes an `ApiClient` as first argument — distinct from `MyInvoisClient::submitDocument($updatedDocument, $authResponse)` which takes the document and auth response. Same method name, different signatures.
+
+---
+
+## Scientific Notation and Lossy Minification (fixed 1.2.0)
+
+LHDN rejects amounts in exponent form (30 Apr 2026) and amounts over 26 digits (24 Oct 2026). Two PHP behaviours used to cause this:
+
+1. `json_encode(1e15)` → `1.0e+15`. `createDocument()` now encodes via `UblJson::encode()`.
+2. `submitDocuments()` minified via decode+encode, so `12345678901234567890123.45` became `1.2345678901234568e+22`. Now it strips whitespace only (`UblJson::minify()`).
+
+If you build UBL JSON yourself, never `json_encode()` floats ≥ 1e15 or < 1e-4 directly.
+
+---
+
+## `createDocument()` order: validate before auth (1.2.0)
+
+`createDocument()` now builds the UBL first. It validates state codes and field rules, then authenticates, then loads the PKCS#12 certificate and signs. So invalid input throws `ValidationException` without a token request or certificate read, and tests for validation failures need no certificate.
 
 ---
 

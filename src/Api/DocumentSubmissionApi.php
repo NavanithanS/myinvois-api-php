@@ -8,6 +8,8 @@ use Nava\MyInvois\Enums\DocumentTypeEnum;
 use Nava\MyInvois\Exception\ApiException;
 use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Http\ApiClient;
+use Nava\MyInvois\Support\UblJson;
+use Nava\MyInvois\Validation\DocumentFieldRulesValidator;
 use Nava\MyInvois\Traits\RateLimitingTrait;
 use Psr\Log\LoggerInterface;
 use Webmozart\Assert\Assert;
@@ -54,7 +56,7 @@ trait DocumentSubmissionApi
         while ($attempt < $maxRetries) {
             try {
                 $this->checkRateLimit('submission');
-                $this->validateSubmission($documents);
+                $this->validateSubmission($documents, is_string($format) ? strtoupper($format) : (string) $format);
 
                 $this->logDebug('Submitting documents', [
                     'attempt' => $attempt + 1,
@@ -162,7 +164,7 @@ trait DocumentSubmissionApi
      *
      * @throws ValidationException If the submission is invalid
      */
-    private function validateSubmission(array $documents): void
+    private function validateSubmission(array $documents, string $format = DocumentFormat::JSON): void
     {
         // Validate document count
         Assert::notEmpty($documents, 'At least one document is required');
@@ -192,6 +194,34 @@ trait DocumentSubmissionApi
 
         // Validate unique code numbers
         $this->validateUniqueCodeNumbers($documents);
+
+        // LHDN field length/format rules (JSON only; XML documents are not inspected)
+        if ($format === DocumentFormat::JSON) {
+            $this->validateDocumentFieldRules($documents);
+        }
+    }
+
+    /**
+     * Apply DocumentFieldRulesValidator to every JSON document, collecting all
+     * violations (keyed "documents[i].<UBL path>") into one ValidationException.
+     *
+     * @param  array<int, array<string, mixed>>  $documents
+     *
+     * @throws ValidationException
+     */
+    private function validateDocumentFieldRules(array $documents): void
+    {
+        $validator = new DocumentFieldRulesValidator();
+        $errors = [];
+        foreach (array_values($documents) as $index => $document) {
+            if (is_string($document['document'] ?? null)) {
+                $errors += $validator->getViolations($document['document'], sprintf('documents[%d].', $index));
+            }
+        }
+
+        if ($errors !== []) {
+            throw DocumentFieldRulesValidator::exception($errors);
+        }
     }
 
     /**
@@ -291,11 +321,15 @@ trait DocumentSubmissionApi
     }
 
     /**
-     * Minify JSON content.
+     * Minify JSON content losslessly.
+     *
+     * Only insignificant whitespace is removed. The document is not re-encoded,
+     * because a json_decode()/json_encode() round trip rewrites large amounts in
+     * exponent form (e.g. 1.2345678901234568e+22), which LHDN rejects.
      */
     private function minifyJson(string $json): string
     {
-        $data = json_decode($json);
+        json_decode($json);
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new ValidationException(
                 'Invalid JSON content',
@@ -303,7 +337,7 @@ trait DocumentSubmissionApi
             );
         }
 
-        return json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        return UblJson::minify($json);
     }
 
     /**

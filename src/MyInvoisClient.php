@@ -26,6 +26,8 @@ use Nava\MyInvois\Traits\DateValidationTrait;
 use Nava\MyInvois\Traits\LoggerTrait;
 use Nava\MyInvois\Traits\RateLimitingTrait;
 use Nava\MyInvois\Traits\UuidValidationTrait;
+use Nava\MyInvois\Support\UblJson;
+use Nava\MyInvois\Validation\DocumentFieldRulesValidator;
 use Nava\MyInvois\Validation\StateCodeValidator;
 use Webmozart\Assert\Assert;
 use Illuminate\Support\Facades\Cache;
@@ -389,60 +391,6 @@ class MyInvoisClient
         $this->supplierMsicDescription = $request->input('supplierMsicDescription') ?: 'Real estate activities with own or leased property n.e.c.';
 
         $this->utcTime = Carbon::now('UTC')->toTimeString() . "Z";
-        $authResponse = $this->authClient->authenticate($this->supplierTIN);
-
-        $certs = [];
-        $passphrase = "BioEMyInvois";
-        $privateKeyPem = config('myinvois.privatekey_path');
-        $privateKey = file_get_contents($privateKeyPem);
-        // dd($privateKey);
-        if (!$privateKey) {
-            die("Failed to read private key file.");
-        }
-
-        // $privateKeyResource = openssl_p"key_get_private($privateKey);
-        // if (!$privateKeyResource) {
-        //     die("Failed to load private key: " . openssl_error_string());
-        // }
-        if (!openssl_pkcs12_read($privateKey, $certs, $passphrase)) {
-            dd(openssl_error_string());
-        }
-
-        // $certificateCer = file_get_contents(config('myinvois.signedsignature_path')); // Load certificate
-
-        // $certificate = openssl_x509_read($certificateCer);
-        // if (!$certificate) {
-        //     die("Failed to load certificate");
-        // }
-
-        $certInfo = openssl_x509_parse($certs['cert']);
-        // dd($certInfo);
-        // echo "X509 Serial Number: " . $certInfo['serialNumber'] . "\n";
-        $this->certSN = $certInfo['serialNumber'];
-
-        $subject = $certInfo['issuer'];
-        $certCN = $subject['CN'];
-        $certO = $subject['O'];
-        $certC = $subject['C'];
-        $issuerName = "CN={$certCN}, O={$certO}, C={$certC}";
-
-        // Get the certificate in DER format
-        openssl_x509_export($certs['cert'], $pem);
-        // Convert to DER by stripping headers/footers and decoding base64
-        $der = base64_decode(str_replace([
-            "-----BEGIN CERTIFICATE-----",
-            "-----END CERTIFICATE-----",
-            "\n",
-            "\r",
-            " "
-        ], "", $pem));
-
-        // Compute SHA-256 digest in base64 (as required by XAdES)
-        $this->certDigest = base64_encode(hash('sha256', $der, true));
-
-        // Save DER and issuer for later use
-        $this->x509cert = base64_encode($der); // if needed in XML later
-
         $this->document = [
             "_D" => "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
             "_A" => "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
@@ -541,7 +489,65 @@ class MyInvoisClient
             ]
         ];
 
-        $docJson = json_encode($this->document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        // Encode without exponent-form numbers (LHDN rejects scientific notation in
+        // amounts) and enforce the LHDN field rules before authenticating or signing.
+        $docJson = UblJson::encode($this->document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        (new DocumentFieldRulesValidator())->validate($docJson);
+
+        $authResponse = $this->authClient->authenticate($this->supplierTIN);
+
+        $certs = [];
+        $passphrase = "BioEMyInvois";
+        $privateKeyPem = config('myinvois.privatekey_path');
+        $privateKey = file_get_contents($privateKeyPem);
+        // dd($privateKey);
+        if (!$privateKey) {
+            die("Failed to read private key file.");
+        }
+
+        // $privateKeyResource = openssl_p"key_get_private($privateKey);
+        // if (!$privateKeyResource) {
+        //     die("Failed to load private key: " . openssl_error_string());
+        // }
+        if (!openssl_pkcs12_read($privateKey, $certs, $passphrase)) {
+            dd(openssl_error_string());
+        }
+
+        // $certificateCer = file_get_contents(config('myinvois.signedsignature_path')); // Load certificate
+
+        // $certificate = openssl_x509_read($certificateCer);
+        // if (!$certificate) {
+        //     die("Failed to load certificate");
+        // }
+
+        $certInfo = openssl_x509_parse($certs['cert']);
+        // dd($certInfo);
+        // echo "X509 Serial Number: " . $certInfo['serialNumber'] . "\n";
+        $this->certSN = $certInfo['serialNumber'];
+
+        $subject = $certInfo['issuer'];
+        $certCN = $subject['CN'];
+        $certO = $subject['O'];
+        $certC = $subject['C'];
+        $issuerName = "CN={$certCN}, O={$certO}, C={$certC}";
+
+        // Get the certificate in DER format
+        openssl_x509_export($certs['cert'], $pem);
+        // Convert to DER by stripping headers/footers and decoding base64
+        $der = base64_decode(str_replace([
+            "-----BEGIN CERTIFICATE-----",
+            "-----END CERTIFICATE-----",
+            "\n",
+            "\r",
+            " "
+        ], "", $pem));
+
+        // Compute SHA-256 digest in base64 (as required by XAdES)
+        $this->certDigest = base64_encode(hash('sha256', $der, true));
+
+        // Save DER and issuer for later use
+        $this->x509cert = base64_encode($der); // if needed in XML later
+
         $docDigest = hash('sha256', $docJson, true);
         $this->certDoc = base64_encode($docDigest);
 
@@ -683,7 +689,7 @@ class MyInvoisClient
             $this->document['Invoice'][0] = array_merge($this->document['Invoice'][0], $this->signature);
         }
 
-        $updatedDocument = json_encode($this->document, JSON_UNESCAPED_SLASHES);
+        $updatedDocument = UblJson::encode($this->document, JSON_UNESCAPED_SLASHES);
         // dd($updatedDocument);
 
         return $this->submitDocument($updatedDocument, $authResponse);
