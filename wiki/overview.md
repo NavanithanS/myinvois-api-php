@@ -1,6 +1,6 @@
 ---
 tags: [overview, project]
-updated: 2026-04-18
+updated: 2026-11-05
 ---
 
 # MyInvois PHP Client — Overview
@@ -73,7 +73,10 @@ $client = new MyInvoisClient($clientId, $secret, $baseUrl, $cache, $config, $htt
 | `src/Http/ApiClient.php` | HTTP transport — auth injection, retry, error mapping |
 | `src/Auth/AuthenticationClient.php` | OAuth2 client credentials flow |
 | `src/Auth/IntermediaryAuthenticationClient.php` | Intermediary extension — per-TIN token caching |
-| `src/Config.php` | Version constants, URL constants, default values |
+| `src/Config.php` | Version constants (incl. SVDP 1.2/1.3 window), URL constants, default values |
+| `src/Validation/DocumentFieldRulesValidator.php` | LHDN field rules shared by `createDocument()` and `submitDocuments()` |
+| `src/Validation/SvdpValidator.php` | SVDP signature/window/issue-date rules |
+| `src/Support/UblJson.php` | Exponent-free JSON encode, lossless minify, number-preserving decode |
 | `config/myinvois.php` | Laravel publishable config |
 | `src/Laravel/MyInvoisServiceProvider.php` | Auto-registered service provider |
 | `src/Laravel/Facades/MyInvois.php` | Laravel facade |
@@ -85,6 +88,8 @@ $client = new MyInvoisClient($clientId, $secret, $baseUrl, $cache, $config, $htt
 - **SSL verification disabled** — auth requests use `'verify' => false`. Malaysian government cert infrastructure doesn't validate cleanly in many environments.
 - **Per-TIN token cache** — intermediary tokens are cached separately per `{clientId}_{onBehalfOfTin}` combination.
 - **Flexible constructor** — supports multiple calling conventions for test ergonomics without needing test-specific factories.
+- **Validate locally before submitting (1.2.0)**: documents LHDN would reject (field rules, state 17, SVDP) throw `ValidationException` before any HTTP call. Code lists are copied from the SDK JSON files and never fetched at runtime.
+- **Injectable clock**: `MyInvoisClient::setClock()`. Otherwise Carbon (so `Carbon::setTestNow()` works) or the system clock. Date-dependent tests must never use the real date.
 
 ## Related Pages
 

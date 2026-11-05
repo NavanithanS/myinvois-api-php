@@ -1,6 +1,6 @@
 ---
 tags: [operations, errors, exceptions]
-updated: 2026-04-18
+updated: 2026-11-05
 ---
 
 # Error Handling
@@ -31,6 +31,11 @@ Thrown for **input that is invalid before hitting the API** or for specific API 
 - `BadStructure` or `MaximumSizeExceeded` API errors (400)
 - `DuplicateSubmission` API error (422)
 - Unauthorized submitter (403 on submission)
+- Since 1.2.0, raised locally before any HTTP call:
+  - **LHDN field rules** (`DocumentFieldRulesValidator`). Every violation is in one exception with code 422; `getErrors()` maps each UBL path (prefixed `documents[i].` in `submitDocuments()`) to its messages. See [[domain/ubl-structure#lhdn-field-rules-enforced-locally-since-120]].
+  - **State code** in `createDocument()`: missing/unknown, or `17` without a consolidated buyer. Keys `buyerState`/`supplierState`.
+  - **SVDP**: `documentVersion`, `issueDate`/`issueTime`, and 1.2/1.3 signature or programme-window mismatches (`*.InvoiceTypeCode@listVersionID`).
+  - **Search**: invalid `classificationCode`. **TIN search**: bad parameter combinations in `searchTaxpayerTin()`.
 
 Constructor: `ValidationException(string $message, array $errors = [], int $code = 0)`.
 
