@@ -1,6 +1,6 @@
 ---
 tags: [operations, errors, exceptions]
-updated: 2026-11-05
+updated: 2026-11-12
 ---
 
 # Error Handling
@@ -14,6 +14,8 @@ updated: 2026-11-05
         ├── AuthenticationException — auth failures (token, credentials, scope)
         ├── ApiException            — API-level errors (4xx/5xx from MyInvois)
         └── NetworkException        — connectivity failures (no response)
+\RuntimeException
+  └── SigningCertificateException  — createDocument() cannot load the PKCS#12 cert (since 1.2.0)
 ```
 
 All exceptions are in `src/Exception/`.
@@ -36,6 +38,11 @@ Thrown for **input that is invalid before hitting the API** or for specific API 
   - **State code** in `createDocument()`: missing/unknown, or `17` without a consolidated buyer. Keys `buyerState`/`supplierState`.
   - **SVDP**: `documentVersion`, `issueDate`/`issueTime`, and 1.2/1.3 signature or programme-window mismatches (`*.InvoiceTypeCode@listVersionID`).
   - **Search**: invalid `classificationCode`. **TIN search**: bad parameter combinations in `searchTaxpayerTin()`.
+  - The field rules (not SVDP) can be switched off: `myinvois.validation.field_rules` or `setFieldRulesValidation(false)`. See [[operations/known-quirks#field-rules-can-be-switched-off-since-120]].
+
+### `SigningCertificateException`
+
+Since 1.2.0 (replaces `die()`/`dd()`). Thrown by `createDocument()` before any HTTP call when `myinvois.privatekey_path` is unset, the file is missing/unreadable/empty, or it cannot be opened as PKCS#12 with the expected passphrase. Extends `\RuntimeException`, not `ValidationException`.
 
 Constructor: `ValidationException(string $message, array $errors = [], int $code = 0)`.
 

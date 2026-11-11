@@ -1,6 +1,6 @@
 ---
 tags: [operations, quirks, gotchas, decisions]
-updated: 2026-11-05
+updated: 2026-11-12
 ---
 
 # Known Quirks & Non-Obvious Behaviors
@@ -31,17 +31,17 @@ This is specific to the LHDN-provisioned signing certificate for this integratio
 
 ---
 
-## `dd()` in Production Code
+## `dd()` in Production Code (fixed in 1.2.0)
 
-`createDocument()` contains:
+Before 1.2.0, `createDocument()` called `die()` when the certificate file could not be read and `dd(openssl_error_string())` when `openssl_pkcs12_read()` failed. Both killed the PHP process and could print internal state.
 
-```php
-if (!openssl_pkcs12_read($privateKey, $certs, $passphrase)) {
-    dd(openssl_error_string());
-}
-```
+Since 1.2.0, `MyInvoisClient::loadSigningCertificate()` throws `Exception\SigningCertificateException` (a `RuntimeException`) when `myinvois.privatekey_path` is unset, missing, unreadable or empty, or the file is not PKCS#12 / uses another passphrase. The certificate is loaded **before** authentication, so a bad certificate makes no HTTP call.
 
-`dd()` (dump-and-die) kills the Laravel process and outputs raw debug data on cert failure. This is a Laravel dev utility — it will expose internal state in production if the cert file is malformed, inaccessible, or the passphrase is wrong.
+---
+
+## Field Rules Can Be Switched Off (since 1.2.0)
+
+The local LHDN field rules include exact-match code lists (unit, country, currency, payment mode, tax type) copied from the SDK. If LHDN adds a code before the library is updated, `createDocument()` / `submitDocuments()` would reject a document LHDN accepts. Escape hatch: `myinvois.validation.field_rules` (`MYINVOIS_VALIDATE_FIELD_RULES=false`) or `$client->setFieldRulesValidation(false)` (setter wins over config). LHDN still validates server-side. The SVDP signature/window checks are **not** affected by the switch. Update the code lists rather than leaving the switch off.
 
 ---
 

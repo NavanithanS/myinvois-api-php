@@ -26,6 +26,11 @@ be set when the version is tagged.
   `submitDocument()` reject 1.2 documents that carry a signature, 1.3
   documents without one, and both once the programme has ended.
 - `MyInvoisClient::setClock(callable)` to inject the current time.
+- `MyInvoisClient::setFieldRulesValidation(bool)` and the config key
+  `validation.field_rules` (`MYINVOIS_VALIDATE_FIELD_RULES`, default `true`)
+  to switch the local field rules off, e.g. if LHDN adds a code before this
+  library is updated. SVDP checks always run.
+- `Exception\SigningCertificateException`.
 - `searchDocuments()` accepts a `classificationCode` filter, as a
   comma-separated string or an array of 3-digit codes (LHDN, 25 Sep 2026).
 - `getDocument()` / `getDocumentDetails()` return `typeVersionNumber`
@@ -47,6 +52,13 @@ be set when the version is tagged.
   SSL certificate renewal, the exchange-rate rule (`createDocument()` is
   MYR-only), and the Hectare unit (`createDocument()` sends `C62`; `HAR` is
   accepted by the validator).
+
+### Fixed
+- `createDocument()` no longer calls `die()` / `dd()` when the signing
+  certificate cannot be loaded. It throws `SigningCertificateException`
+  (path unset, file missing/unreadable/empty, not PKCS#12 or wrong
+  passphrase), and loads the certificate before authenticating, so no HTTP
+  call is made.
 
 ### Changed
 - **PHP requirement (behaviour change)**: `require.php` raised from `>=7.1.0`

@@ -46,3 +46,5 @@ Key findings: two-domain architecture, XAdES signing with hardcoded passphrase `
 ## [2026-11-05] update | Taxpayer TIN+BRN cross-check note, README sections for SVDP/field rules/new methods, CHANGELOG 1.2.0; plan sdk-release-notes-2026 marked done (phase 5)
 
 ## [2026-11-05] update | Pre-merge review: error-handling.md lists the new local ValidationException triggers; overview.md adds new key files and the validate-before-submit and clock decisions
+
+## [2026-11-12] fix | createDocument() throws SigningCertificateException instead of die()/dd() and loads the cert before authenticating; field rules can be switched off (validation.field_rules / setFieldRulesValidation); SVDP checks always on

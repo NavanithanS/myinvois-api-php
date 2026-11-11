@@ -1,6 +1,6 @@
 ---
 tags: [operations, config, laravel, setup]
-updated: 2026-04-18
+updated: 2026-11-12
 ---
 
 # Configuration & Setup
@@ -49,6 +49,12 @@ File: `config/myinvois.php`
 | `privatekey_path` | `MYINVOIS_PRIVATEKEY_PATH` | — | Path to PKCS#12 cert file |
 | `sslcert_path` | `MYINVOIS_SSLCERT_PATH` | — | SSL cert path |
 | `signedsignature_path` | `MYINVOIS_SIGNSIG_PATH` | — | Signed signature path |
+
+### Local validation
+
+| Key | Env var | Default | Purpose |
+|-----|---------|---------|---------|
+| `validation.field_rules` | `MYINVOIS_VALIDATE_FIELD_RULES` | `true` | LHDN field rules in `createDocument()` / `submitDocuments()`. `setFieldRulesValidation()` overrides it per client. SVDP checks always run. |
 
 ### Intermediary
 

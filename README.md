@@ -454,6 +454,15 @@ try {
 (new \Nava\MyInvois\Validation\DocumentFieldRulesValidator())->getViolations($ublJson);
 ```
 
+If LHDN adds a code (unit, country, currency, ...) before this library is updated, you can switch the local field rules off. LHDN still validates the document, and the SVDP checks below always run:
+
+```php
+// config/myinvois.php: 'validation' => ['field_rules' => env('MYINVOIS_VALIDATE_FIELD_RULES', true)]
+$client->setFieldRulesValidation(false); // per client, overrides config
+```
+
+`createDocument()` throws `\Nava\MyInvois\Exception\SigningCertificateException` if the PKCS#12 file at `myinvois.privatekey_path` is missing, unreadable or cannot be opened. Nothing is sent to LHDN in that case.
+
 SVDP: Voluntary Disclosure Programme (until 31 Dec 2027)
 
 Versions `1.2` (unsigned) and `1.3` (signed) can be used until 31 Dec 2027. During the programme the issue date may be backdated (earliest 1 Aug 2024).

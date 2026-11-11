@@ -1,6 +1,6 @@
 ---
 tags: [domain, signing, xades, cryptography]
-updated: 2026-04-18
+updated: 2026-11-12
 ---
 
 # XAdES Digital Signing
@@ -15,10 +15,14 @@ MyInvois documents must be digitally signed using XAdES-BES (XML Advanced Electr
 
 The signing certificate is loaded from a PKCS#12 (`.p12`/`.pfx`) file:
 
+Loaded by `MyInvoisClient::loadSigningCertificate()` (since 1.2.0), after the field rules and **before** authentication:
+
 ```php
-$privateKey = file_get_contents(config('myinvois.privatekey_path'));
-openssl_pkcs12_read($privateKey, $certs, "BioEMyInvois");
+$certs = $this->loadSigningCertificate(); // reads config('myinvois.privatekey_path')
+// openssl_pkcs12_read($contents, $certs, self::SIGNING_CERTIFICATE_PASSPHRASE)
 ```
+
+Any failure (path unset, file missing/unreadable/empty, not PKCS#12, wrong passphrase) throws `SigningCertificateException`.
 
 **Passphrase is hardcoded as `"BioEMyInvois"`** — specific to the LHDN-provisioned cert for this integration. See [[operations/known-quirks#xades-signing-passphrase]].
 
@@ -114,5 +118,5 @@ Note: the `documentHash` sent in the submission payload is SHA-256 **hex**, but 
 ## Related
 
 - [[operations/known-quirks#xades-signing-passphrase]] — hardcoded passphrase
-- [[operations/known-quirks#dd-in-production-code]] — `dd()` on cert load failure
+- [[operations/known-quirks#dd-in-production-code-fixed-in-120]] — cert load failures now throw `SigningCertificateException`
 - [[api/document-submission]] — how the signed document is submitted
