@@ -19,6 +19,7 @@ use Nava\MyInvois\Api\IntermediaryApi;
 use Nava\MyInvois\Api\TaxpayerApi;
 use Nava\MyInvois\Auth\AuthenticationClient;
 use Nava\MyInvois\Exception\ApiException;
+use Nava\MyInvois\Exception\SigningCertificateException;
 use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Http\ApiClient;
 use Nava\MyInvois\Enums\DocumentFormat;
@@ -113,6 +114,12 @@ class MyInvoisClient
 
     /** @var (callable(): \DateTimeInterface)|null */
     private $clock = null;
+
+    /** @var bool|null Null = use config (default enabled) */
+    private $fieldRulesValidation = null;
+
+    /** Passphrase the signing PKCS#12 file must use. */
+    private const SIGNING_CERTIFICATE_PASSPHRASE = 'BioEMyInvois';
 
     protected $cache;
     private $clientId;
@@ -517,37 +524,17 @@ class MyInvoisClient
         // Encode without exponent-form numbers (LHDN rejects scientific notation in
         // amounts) and enforce the LHDN field rules before authenticating or signing.
         $docJson = UblJson::encode($this->document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        (new DocumentFieldRulesValidator())->validate($docJson);
+        if ($this->fieldRulesEnabled()) {
+            (new DocumentFieldRulesValidator())->validate($docJson);
+        }
+
+        // Load the certificate before authenticating so a bad certificate fails
+        // without any HTTP call.
+        $certs = $this->loadSigningCertificate();
 
         $authResponse = $this->authClient->authenticate($this->supplierTIN);
 
-        $certs = [];
-        $passphrase = "BioEMyInvois";
-        $privateKeyPem = config('myinvois.privatekey_path');
-        $privateKey = file_get_contents($privateKeyPem);
-        // dd($privateKey);
-        if (!$privateKey) {
-            die("Failed to read private key file.");
-        }
-
-        // $privateKeyResource = openssl_p"key_get_private($privateKey);
-        // if (!$privateKeyResource) {
-        //     die("Failed to load private key: " . openssl_error_string());
-        // }
-        if (!openssl_pkcs12_read($privateKey, $certs, $passphrase)) {
-            dd(openssl_error_string());
-        }
-
-        // $certificateCer = file_get_contents(config('myinvois.signedsignature_path')); // Load certificate
-
-        // $certificate = openssl_x509_read($certificateCer);
-        // if (!$certificate) {
-        //     die("Failed to load certificate");
-        // }
-
         $certInfo = openssl_x509_parse($certs['cert']);
-        // dd($certInfo);
-        // echo "X509 Serial Number: " . $certInfo['serialNumber'] . "\n";
         $this->certSN = $certInfo['serialNumber'];
 
         $subject = $certInfo['issuer'];
@@ -767,6 +754,77 @@ class MyInvoisClient
         $this->clock = $clock;
 
         return $this;
+    }
+
+    /**
+     * Turn the local LHDN field-rule checks (lengths, dates, code lists, amount
+     * format) on or off for createDocument() and submitDocuments(). Overrides the
+     * myinvois.validation.field_rules config. SVDP checks always run.
+     */
+    public function setFieldRulesValidation(bool $enabled): self
+    {
+        $this->fieldRulesValidation = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * Setter override, else the client config array, else Laravel config
+     * (myinvois.validation.field_rules), else enabled.
+     */
+    protected function fieldRulesEnabled(): bool
+    {
+        if ($this->fieldRulesValidation !== null) {
+            return $this->fieldRulesValidation;
+        }
+
+        if (isset($this->config['validation']['field_rules'])) {
+            return filter_var($this->config['validation']['field_rules'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        try {
+            $configured = config('myinvois.validation.field_rules');
+        } catch (\Throwable $e) {
+            $configured = null;
+        }
+
+        return $configured === null ? true : filter_var($configured, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Read the PKCS#12 signing certificate from myinvois.privatekey_path.
+     *
+     * @return array{cert: string, pkey: string}
+     *
+     * @throws SigningCertificateException
+     */
+    private function loadSigningCertificate(): array
+    {
+        $path = config('myinvois.privatekey_path');
+        if (! is_string($path) || $path === '') {
+            throw new SigningCertificateException('Signing certificate path is not configured (myinvois.privatekey_path / MYINVOIS_PRIVATEKEY_PATH).');
+        }
+        if (! is_file($path) || ! is_readable($path)) {
+            throw new SigningCertificateException("Signing certificate file is missing or unreadable: {$path}");
+        }
+
+        $contents = file_get_contents($path);
+        if ($contents === false || $contents === '') {
+            throw new SigningCertificateException("Signing certificate file is empty or could not be read: {$path}");
+        }
+
+        $certs = [];
+        if (! openssl_pkcs12_read($contents, $certs, self::SIGNING_CERTIFICATE_PASSPHRASE) || ! isset($certs['cert'], $certs['pkey'])) {
+            $reason = '';
+            while (($message = openssl_error_string()) !== false) {
+                $reason = $message;
+            }
+            throw new SigningCertificateException(
+                "Signing certificate could not be opened as PKCS#12 (wrong passphrase or format): {$path}" . ($reason !== '' ? " ({$reason})" : '')
+            );
+        }
+
+        return $certs;
     }
 
     /**

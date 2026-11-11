@@ -28,6 +28,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Local Validation
+    |--------------------------------------------------------------------------
+    |
+    | field_rules: check LHDN field lengths, dates, code lists (unit, country,
+    | currency, payment mode, tax type) and amount format before submitting.
+    | Set to false only if a newly added LHDN code is rejected locally before
+    | this library is updated; LHDN still validates on its side. SVDP rules
+    | (1.2 unsigned / 1.3 signed, until 2027-12-31) are always checked.
+    |
+     */
+    'validation'           => [
+        'field_rules' => env('MYINVOIS_VALIDATE_FIELD_RULES', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Intermediary Configuration
     |--------------------------------------------------------------------------
     |

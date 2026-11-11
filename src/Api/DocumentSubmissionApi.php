@@ -216,13 +216,16 @@ trait DocumentSubmissionApi
         $validator = new DocumentFieldRulesValidator();
         $svdp = new SvdpValidator();
         $now = $this->now();
+        $checkFieldRules = ! method_exists($this, 'fieldRulesEnabled') || $this->fieldRulesEnabled();
         $errors = [];
         foreach (array_values($documents) as $index => $document) {
             if (! is_string($document['document'] ?? null)) {
                 continue;
             }
             $prefix = sprintf('documents[%d].', $index);
-            $errors += $validator->getViolations($document['document'], $prefix);
+            if ($checkFieldRules) {
+                $errors += $validator->getViolations($document['document'], $prefix);
+            }
 
             $decoded = json_decode($document['document'], true);
             if (is_array($decoded)) {
