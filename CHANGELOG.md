@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.2.0] - Unreleased
+## [1.2.0] - 2026-11-12
 
 Adopts the LHDN MyInvois SDK release notes from Jul 2025 to Sep 2026
-(https://sdk.myinvois.hasil.gov.my/sdk-1-0-release/). The release date will
-be set when the version is tagged.
+(https://sdk.myinvois.hasil.gov.my/sdk-1-0-release/) and fixes the library
+against LHDN preprod.
 
 ### Added
 - `Validation\DocumentFieldRulesValidator`, `Validation\UnitTypeValidator`
