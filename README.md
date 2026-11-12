@@ -91,7 +91,7 @@ use Nava\MyInvois\MyInvoisClient;
 $client = new MyInvoisClient(
     clientId: 'your_client_id',
     clientSecret: 'your_client_secret',
-    baseUrl: 'https://preprod.myinvois.hasil.gov.my',
+    baseUrl: 'https://preprod-api.myinvois.hasil.gov.my', // API host (MyInvoisClient::SANDBOX_URL)
     cache: new \Illuminate\Cache\Repository(new \Illuminate\Cache\ArrayStore),
     config: [
         'cache' => ['enabled' => true, 'ttl' => 3600],
@@ -138,9 +138,12 @@ Add to your `.env` file:
 MYINVOIS_CLIENT_ID=your_client_id
 MYINVOIS_CLIENT_SECRET=your_client_secret
 
-# Environment URLs
-MYINVOIS_BASE_URL=https://preprod.myinvois.hasil.gov.my
+# Environment URLs. The API and the identity service share the *-api host.
+# Production: https://api.myinvois.hasil.gov.my for both.
+MYINVOIS_BASE_URL=https://preprod-api.myinvois.hasil.gov.my
 MYINVOIS_AUTH_URL=https://preprod-api.myinvois.hasil.gov.my
+# Optional: portal host for share/QR links (derived from MYINVOIS_BASE_URL if empty)
+# MYINVOIS_PORTAL_URL=https://preprod.myinvois.hasil.gov.my
 # Optional: pin a CA/cert for TLS
 
 # Certificate paths (if required)

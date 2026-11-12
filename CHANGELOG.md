@@ -45,6 +45,9 @@ be set when the version is tagged.
   Its behaviour is unchanged.
 
 ### Notes
+- Verified against LHDN preprod on 2026-11-12 with unsigned SVDP 1.2
+  invoices. Signed 1.1 / 1.3 documents and `createDocument()` were not
+  tested against LHDN (they need an LHDN-issued signing certificate).
 - Since 1 Aug 2026 LHDN's Validate TIN cross-checks the TIN against the BRN.
   `validateTaxpayerTin(..., 'BRN', ...)` may now return `false` for TINs that
   used to validate. The library is unchanged.
@@ -54,6 +57,26 @@ be set when the version is tagged.
   accepted by the validator).
 
 ### Fixed
+- **API host (behaviour change)**: `SANDBOX_URL` / `PRODUCTION_URL` now point
+  at the e-Invoice API hosts (`preprod-api.` / `api.myinvois.hasil.gov.my`).
+  The old values were the portal hosts, which return 404 for `/api/*`, so every
+  document and taxpayer call failed with the default or documented
+  configuration. A base URL that still points at a portal host is mapped to
+  its API host automatically. Share/QR links use the new
+  `PORTAL_SANDBOX_URL` / `PORTAL_PRODUCTION_URL` (or `portal_url` /
+  `MYINVOIS_PORTAL_URL`).
+- `submitDocuments()` threw "Invalid response format" on every real 202
+  because LHDN returns `submissionUid`, not `submissionUID`. It now returns
+  both keys (null when every document is rejected).
+- `getDocument()` / `getDocumentDetails()` rejected every real UUID (LHDN
+  UUIDs are 26 characters; the check required 15). 15-32 is now accepted,
+  and share-link `longId`s may contain lower-case letters.
+- `searchDocuments()` threw on every real response (LHDN returns `result`, not
+  `documents`). Raw rows are returned as `result`; `documents` holds
+  `DocumentSearchResult` DTOs built by the new `DocumentSearchResult::fromApi()`.
+- Incoterms (max 3) now applies to every `AdditionalDocumentReference` whose
+  `DocumentType` is not `CustomsImportForm` / `FreeTradeAgreement` / `K2`,
+  matching LHDN (CF417). Note: the official SDK samples fail this as published.
 - `createDocument()` no longer calls `die()` / `dd()` when the signing
   certificate cannot be loaded. It throws `SigningCertificateException`
   (path unset, file missing/unreadable/empty, not PKCS#12 or wrong
@@ -83,8 +106,9 @@ be set when the version is tagged.
   to state `17` (Not Applicable) for missing or unknown `buyerState` /
   `supplierState`. It now throws `ValidationException` naming the received
   value. `17` / `Not Applicable` / `NA` is accepted only for consolidated
-  e-Invoices (buyer TIN `EI00000000010`), matching the LHDN rule in force since
-  30 Apr 2026. State names are now trimmed and matched case-insensitively, and
+  e-Invoices (buyer TIN `EI00000000010` and a line with classification code
+  `004`), matching the LHDN rule in force since 30 Apr 2026 as observed on
+  preprod. State names are now trimmed and matched case-insensitively, and
   single-digit codes are zero-padded.
 - **PASSPORT ID format**: TIN validation accepts any 1–12 letters/digits
   (LHDN limit from 24 Oct 2026) instead of `[A-Z]` + 8 digits.

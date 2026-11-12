@@ -1,6 +1,6 @@
 ---
 tags: [api, documents, search]
-updated: 2026-11-05
+updated: 2026-11-12
 ---
 
 # Document Search
@@ -56,18 +56,19 @@ Both date range types cannot exceed **30 days**. Validated by `DateValidationTra
 
 ## Response
 
+LHDN returns `{"result": [...], "metadata": {"totalPages", "totalCount"}}` (verified on preprod 2026-11-12). Before 1.2.0 the library required a `documents` key and threw on every real response. Since 1.2.0:
+
 ```json
 {
-  "documents": [ /* array of DocumentSearchResult DTOs */ ],
-  "metadata": {
-    "totalCount": 42,
-    "totalPages": 1,
-    "hasNext": false
-  }
+  "result": [ /* raw LHDN rows */ ],
+  "documents": [ /* the same rows as DocumentSearchResult DTOs */ ],
+  "metadata": { "totalCount": 42, "totalPages": 1 }
 }
 ```
 
-Documents are normalized to `DocumentSearchResult` DTOs (`src/Data/DocumentSearchResult.php`). Missing fields are defaulted:
+Real rows use `submissionUid`, `issuerTIN` (no `issuerName`; `supplierName` is used), `totalExcludingTax` / `totalDiscount` / `totalNetAmount` / `totalPayableAmount`, any TIN prefix (`IG…`, `EI…`), and `dateTimeValidated` may be null. `DocumentSearchResult::fromApi()` maps them (`totalSales` ← `totalExcludingTax`, `netAmount` ← `totalNetAmount`, `total` ← `totalPayableAmount`). The `classificationCode` filter works server-side (preprod: `003` matched, `022` returned none).
+
+Legacy `documents`-shaped responses still go through `DocumentSearchResult::fromArray()`, whose missing fields are defaulted:
 
 | Missing field | Default |
 |--------------|---------|

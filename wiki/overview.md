@@ -1,6 +1,6 @@
 ---
 tags: [overview, project]
-updated: 2026-11-05
+updated: 2026-11-12
 ---
 
 # MyInvois PHP Client — Overview
@@ -30,19 +30,20 @@ A PHP client library for Malaysia's **MyInvois** e-invoicing system, operated by
 | Static analysis | PHPStan level 8 |
 | Formatting | Laravel Pint |
 
-## Two-Domain Architecture
+## Hosts: API vs Portal
 
-MyInvois uses **two completely separate base domains**. This is the most common source of configuration confusion.
+**Corrected 2026-11-12** (verified against preprod with real credentials). The e-Invoice API and the identity service share the `*-api` host; the portal host does **not** serve `/api/*` (404). Before 1.2.0 the library used the portal host as its API base URL, so every document/taxpayer call failed with 404.
 
 | Purpose | Production | Sandbox |
 |---------|-----------|---------|
-| **Identity** (token endpoint) | `api.myinvois.hasil.gov.my` | `preprod-api.myinvois.hasil.gov.my` |
-| **API** (document operations) | `myinvois.hasil.gov.my` | `preprod.myinvois.hasil.gov.my` |
+| **Identity** (`/connect/token`) | `api.myinvois.hasil.gov.my` | `preprod-api.myinvois.hasil.gov.my` |
+| **API** (`/api/v1.0/...`) | `api.myinvois.hasil.gov.my` | `preprod-api.myinvois.hasil.gov.my` |
+| **Portal** (share/QR links `/{uuid}/share/{longId}`) | `myinvois.hasil.gov.my` | `preprod.myinvois.hasil.gov.my` |
 
-Token requests → identity domain at `/connect/token`.  
-All document API calls → API domain at `/api/v1.0/...`.
-
-The client auto-derives the identity URL from the base URL by detecting `preprod` in the hostname.
+- `MyInvoisClient::SANDBOX_URL` / `PRODUCTION_URL` (and `Config::`) are the API hosts; `PORTAL_SANDBOX_URL` / `PORTAL_PRODUCTION_URL` are the portal hosts.
+- `Config::apiBaseUrl()` maps an old portal base URL to its API host in the client constructor, so existing `.env` files keep working.
+- Share links use `getPortalBaseUrl()`: `myinvois.portal_url` if set, else `Config::portalBaseUrl(base_url)`.
+- The identity URL is still derived from the base URL by detecting `preprod`.
 
 ## Three Client Modes
 

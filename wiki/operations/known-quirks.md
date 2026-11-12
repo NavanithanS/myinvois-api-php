@@ -158,3 +158,18 @@ Intermediary tokens are cached separately per `{clientId}_{onBehalfOfTin}` — n
 - [[domain/signing]] — XAdES signature details
 - [[domain/ubl-structure#allowancecharge]] — AllowanceCharge structure
 - [[domain/tax-codes#tax-category-ids]] — service tax rate mapping
+
+---
+
+## Preprod Findings (2026-11-12)
+
+A sandbox run with real credentials (unsigned SVDP 1.2 invoices) found that the pre-1.2.0 library could not talk to LHDN as shipped. All fixed in 1.2.0; details on the linked pages:
+
+- API base URL was the portal host (404 for `/api/*`) → [[overview#hosts-api-vs-portal]]
+- Submission response key is `submissionUid` → [[api/document-submission#submission-response]]
+- UUIDs are 26 chars; `longId` has lower-case letters → [[api/document-retrieval#longid-and-shareable-urls]]
+- Search returns `result`, not `documents` → [[api/document-search#response]]
+- Incoterms = any reference without a customs/FTA `DocumentType`; the official SDK samples fail CF417 as published → [[domain/ubl-structure]]
+- State 17 consolidated = general TIN **and** classification `004` → [[domain/tax-codes#state-code-17-rule-since-30-apr-2026]]
+- Confirmed: issue dates before 2024-08-01 fail CF321; a normal invoice with state 17 fails CV317; `typeVersionNumber` is returned by details; `searchTaxpayerTin` with `fileType`; TIN validation.
+- Not covered: signed 1.1/1.3 and `createDocument()` end to end (needs an LHDN-issued certificate).

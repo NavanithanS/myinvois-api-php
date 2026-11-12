@@ -1,6 +1,6 @@
 ---
 tags: [api, submission, documents]
-updated: 2026-11-05
+updated: 2026-11-12
 ---
 
 # Document Submission
@@ -93,9 +93,11 @@ Both paths run `DocumentFieldRulesValidator`. `createDocument()` runs it on the 
 
 ## Submission Response
 
+LHDN returns **`submissionUid`** (lower-case `id`; verified on preprod 2026-11-12), which is `null` when every document is rejected. Before 1.2.0 the library required `submissionUID` and threw `ApiException("Invalid response format from submission endpoint")` on every real 202, even though LHDN had accepted the documents. Since 1.2.0 `submitDocuments()` returns both `submissionUid` and `submissionUID` (same value) and defaults both document lists to `[]`.
+
 ```json
 {
-  "submissionUID": "XXXXXXXXXXXXXXXXXXXX",
+  "submissionUid": "EAKP79H5SHEKDKSGAF3QG67M10",
   "acceptedDocuments": [
     { "uuid": "...", "invoiceCodeNumber": "INV-2024-001" }
   ],

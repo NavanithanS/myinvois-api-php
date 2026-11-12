@@ -48,3 +48,5 @@ Key findings: two-domain architecture, XAdES signing with hardcoded passphrase `
 ## [2026-11-05] update | Pre-merge review: error-handling.md lists the new local ValidationException triggers; overview.md adds new key files and the validate-before-submit and clock decisions
 
 ## [2026-11-12] fix | createDocument() throws SigningCertificateException instead of die()/dd() and loads the cert before authenticating; field rules can be switched off (validation.field_rules / setFieldRulesValidation); SVDP checks always on
+
+## [2026-11-12] fix | Preprod run: API base URL is the *-api host (portal hosts mapped, portal_url for share links), submissionUid response key, 26-char UUIDs and mixed-case longId, search `result` rows (DocumentSearchResult::fromApi), Incoterms = any non-customs/FTA reference, state 17 consolidated needs classification 004

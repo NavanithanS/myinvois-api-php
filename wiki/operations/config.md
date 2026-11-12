@@ -37,7 +37,8 @@ File: `config/myinvois.php`
 
 | Key | Env var | Default | Purpose |
 |-----|---------|---------|---------|
-| `base_url` | `MYINVOIS_BASE_URL` | Sandbox URL | Document API base |
+| `base_url` | `MYINVOIS_BASE_URL` | `https://preprod-api.myinvois.hasil.gov.my` | Document API base (the `*-api` host; old portal hosts are mapped to it) |
+| `portal_url` | `MYINVOIS_PORTAL_URL` | derived from `base_url` | Portal host for share/QR links |
 | `auth.url` | `MYINVOIS_AUTH_URL` | Sandbox identity URL | Token endpoint base |
 
 > **Default is sandbox** — you must explicitly set production URLs in production environments.
@@ -123,7 +124,7 @@ $client = $factory->make($clientId, $secret, $baseUrl, $httpClient, $options);
 ```env
 MYINVOIS_CLIENT_ID=your-client-id
 MYINVOIS_CLIENT_SECRET=your-client-secret
-MYINVOIS_BASE_URL=https://myinvois.hasil.gov.my
+MYINVOIS_BASE_URL=https://api.myinvois.hasil.gov.my
 MYINVOIS_AUTH_URL=https://api.myinvois.hasil.gov.my
 MYINVOIS_SUPPLIER_TIN=C1234567890
 MYINVOIS_PRIVATEKEY_PATH=/path/to/cert.p12

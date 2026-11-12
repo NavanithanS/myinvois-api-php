@@ -1,6 +1,6 @@
 ---
 tags: [domain, ubl, document-format]
-updated: 2026-11-05
+updated: 2026-11-12
 ---
 
 # UBL Document Structure
@@ -175,7 +175,7 @@ Sources: SDK release notes 3 Jul 2026 (Production 15 Aug 2026), 30 Apr 2026, 6 A
 | e-Invoice Code/Number | `Invoice.ID` | ≤ 50 |
 | Supplier bank account | `PaymentMeans.PayeeFinancialAccount.ID` | ≤ 150 |
 | Certified Exporter no. | supplier `AdditionalAccountID[@schemeAgencyName=CertEX]` (case-insensitive) | ≤ 300 |
-| Incoterms | `AdditionalDocumentReference.ID`. The spec says `[4]`, but the entry is identified as **the reference with no `DocumentType`** (as in the SDK sample: `{"ID":[{"_":"CIF"}]}`). It is **not** under `Delivery` | ≤ 3 |
+| Incoterms | `AdditionalDocumentReference.ID`. LHDN treats **every reference whose `DocumentType` is not `CustomsImportForm` / `FreeTradeAgreement` / `K2`** (missing, empty or unknown) as Incoterms (preprod 2026-11-12: an unknown type with an 11-char ID failed CF417; the official SDK samples fail this way because of a placeholder reference). It is **not** under `Delivery` | ≤ 3 |
 | Frequency of Billing | `InvoicePeriod.Description` | ≤ 50 |
 | Business activity desc. | supplier `IndustryClassificationCode@name` | ≤ 300 |
 | Payment terms | `PaymentTerms.Note` | ≤ 300 |

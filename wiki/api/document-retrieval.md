@@ -1,6 +1,6 @@
 ---
 tags: [api, documents, retrieval]
-updated: 2026-11-05
+updated: 2026-11-12
 ---
 
 # Document Retrieval
@@ -60,18 +60,20 @@ Both methods return a normalized array. All date fields are mapped to `DateTimeI
 
 ## longId and Shareable URLs
 
-`longId` is a 40+ character uppercase alphanumeric string. It is only present once a document reaches `Valid` status.
+`longId` is a 40+ character alphanumeric string that **contains lower-case letters** (e.g. `848K10159P2R8V5WAF3QG67M10mbBOzD1794441448`, preprod 2026-11-12). It is only present once a document reaches `Valid` status (empty string when Invalid).
 
-Shareable URL format:
+Document UUIDs and submission UIDs are **26** upper-case alphanumerics (e.g. `A284SAC7CQ8Y5EDXAF3QG67M10`). Before 1.2.0 `UuidValidationTrait` required exactly 15, so `getDocument()` / `getDocumentDetails()` rejected every real UUID; it now accepts 15-32.
+
+Shareable URL format (portal host, not the API host):
 ```
-{base_url}/{uuid}/share/{longId}
+{portal}/{uuid}/share/{longId}
 ```
 
 Two methods generate this URL:
 - `getDocumentShareableUrl(string $uuid, string $longId)` — on `DocumentRetrievalApi`
 - `generateDocumentPublicUrl(string $uuid, string $longId)` — on `DocumentDetailsApi`
 
-Both validate `longId` format with `/^[A-Z0-9\s]{40,}$/`.
+Both validate `longId` format with `/^[A-Za-z0-9\s]{40,}$/` and use `getPortalBaseUrl()`.
 
 ## QR Code Generation
 
@@ -82,7 +84,7 @@ $qrData = $client->generateQrCode($uuid);
 
 Flow:
 1. Calls `getDocumentLongId($uuid)` → `getDocument($uuid)` → extracts `longId`
-2. Constructs `{base_url}/{uuid}/share/{longId}` URL
+2. Constructs `{portal}/{uuid}/share/{longId}` URL
 3. Generates 100px QR with 10px margin using `endroid/qr-code` v3.5.x
 4. Returns `data:image/png;base64,...` string
 

@@ -1,6 +1,6 @@
 ---
 tags: [domain, tax, codes, malaysia]
-updated: 2026-11-05
+updated: 2026-11-12
 ---
 
 # Malaysian Tax Codes & Reference Data
@@ -112,7 +112,9 @@ Used in `PostalAddress.CountrySubentityCode`:
 
 ### State code 17 rule (since 30 Apr 2026)
 
-LHDN only accepts `17` (Not Applicable) for **consolidated e-Invoices** (buyer TIN `EI00000000010`) or **addresses outside Malaysia** (non-MYS parties may also send a free-text state name, ≤ 50 chars).
+LHDN only accepts `17` (Not Applicable) for **consolidated e-Invoices** or **addresses outside Malaysia** (non-MYS parties may also send a free-text state name, ≤ 50 chars).
+
+A consolidated e-Invoice means buyer TIN `EI00000000010` **and** classification code `004` (verified on preprod 2026-11-12: general TIN with only classification `003` → CV317 plus ERR236 "General TIN ... applicable for Classification Code 004 only"; with `004` the state was accepted). The library requires both, in `DocumentFieldRulesValidator` and in `createDocument()` (a `lineItems[*].classificationCode` of `004`).
 
 State input handling in `createDocument()` (`MyInvoisClient::resolveStateCode()`), since 1.2.0:
 
