@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use GuzzleHttp\Psr7\Response;
 use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Tests\Support\CreatesDocuments;
+use Nava\MyInvois\Tests\Support\SdkSamples;
 use Nava\MyInvois\Tests\TestCase;
 
 /**
@@ -130,7 +131,7 @@ class SvdpSubmissionTest extends TestCase
      */
     private function sample(string $version, ?callable $mutate = null): array
     {
-        $json = (string) file_get_contents(__DIR__ . "/../fixtures/sdk/{$version}-Invoice-Sample.json");
+        $json = SdkSamples::json($version);
         if ($mutate !== null) {
             $json = (string) json_encode($mutate(json_decode($json, true)));
         }

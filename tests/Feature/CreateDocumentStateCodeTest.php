@@ -130,14 +130,42 @@ class CreateDocumentStateCodeTest extends TestCase
     {
         $this->mockDocumentSubmission();
 
-        $this->client->createDocument($this->documentRequest([
-            'buyerTIN' => 'EI00000000010',
-            'buyerName' => 'General Public',
-            'buyerState' => $input,
-        ]));
+        $this->client->createDocument($this->documentRequest(self::consolidated(['buyerState' => $input])));
 
         $document = $this->lastSubmittedDocument();
         $buyerAddress = $document['Invoice'][0]['AccountingCustomerParty'][0]['Party'][0]['PostalAddress'][0];
         $this->assertSame('17', $buyerAddress['CountrySubentityCode'][0]['_']);
+    }
+
+    /**
+     * Consolidated e-Invoice: general-public buyer TIN and classification code 004
+     * (LHDN preprod rejects state 17 with CV317 when the 004 line is missing).
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private static function consolidated(array $overrides = []): array
+    {
+        return array_replace([
+            'buyerTIN' => 'EI00000000010',
+            'buyerName' => 'General Public',
+            'lineItems' => [
+                ['description' => 'Daily sales', 'quantity' => 1, 'unitPrice' => 100.00, 'taxRate' => 6, 'taxAmount' => 6.00, 'subtotal' => 100.00, 'total' => 106.00, 'classificationCode' => '004'],
+            ],
+        ], $overrides);
+    }
+
+    public function test_state_17_is_rejected_for_general_buyer_without_classification_004(): void
+    {
+        $request = self::consolidated(['buyerState' => '17']);
+        $request['lineItems'][0]['classificationCode'] = '022';
+
+        try {
+            $this->client->createDocument($this->documentRequest($request));
+            $this->fail('Expected ValidationException');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('classificationCode 004', $e->getErrors()['buyerState'][0]);
+        }
+        $this->assertCount(0, $this->container);
     }
 }

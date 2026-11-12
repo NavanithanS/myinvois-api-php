@@ -46,12 +46,17 @@ trait DocumentSearchApi
                 ['query' => $query]
             );
 
-            if (! isset($response['documents']) || ! isset($response['metadata'])) {
+            // LHDN returns {"result": [...], "metadata": {...}} (verified 2026-11-12).
+            // "documents" is kept as DocumentSearchResult DTOs for compatibility.
+            if (isset($response['result']) && is_array($response['result']) && isset($response['metadata'])) {
+                $response['documents'] = array_map(
+                    static fn (array $row) => \Nava\MyInvois\Data\DocumentSearchResult::fromApi($row),
+                    $response['result']
+                );
+            } elseif (! isset($response['documents']) || ! isset($response['metadata'])) {
                 throw new ApiException('Invalid response format from search endpoint');
-            }
-
-            // Normalize documents to DocumentSearchResult DTOs when present
-            if (is_array($response['documents'])) {
+            } elseif (is_array($response['documents'])) {
+                // Legacy response shape
                 $response['documents'] = array_map(function (array $doc) {
                     // Ensure required keys for DTO
                     $doc += [

@@ -16,6 +16,10 @@ return [
 
     'base_url'             => env('MYINVOIS_BASE_URL', \Nava\MyInvois\MyInvoisClient::SANDBOX_URL),
 
+    // Portal host for document share/QR links. Leave empty to derive it from base_url
+    // (preprod-api -> preprod.myinvois.hasil.gov.my, api -> myinvois.hasil.gov.my).
+    'portal_url'           => env('MYINVOIS_PORTAL_URL'),
+
     'sslcert_path'         => env('MYINVOIS_SSLCERT_PATH'),
 
     'signedsignature_path' => env('MYINVOIS_SIGNSIG_PATH'),

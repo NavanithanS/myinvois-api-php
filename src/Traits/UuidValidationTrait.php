@@ -15,7 +15,8 @@ trait UuidValidationTrait
      *
      * Validates that a UUID:
      * - Is not empty
-     * - Is exactly 15 characters
+     * - Is 15 to 32 characters (LHDN UUIDs are 26 characters since at least 2026;
+     *   early SDK examples used 15)
      * - Contains only uppercase alphanumeric characters (A-Z, 0-9)
      * - Has valid format for MyInvois system
      *
@@ -25,10 +26,10 @@ trait UuidValidationTrait
      */
     protected function validateUuid(string $uuid): void
     {
-        if ($uuid === '' || !preg_match('/^[A-Z0-9]{15}$/', $uuid)) {
+        if ($uuid === '' || !preg_match('/^[A-Z0-9]{15,32}$/', $uuid)) {
             throw new ValidationException(
-                'Invalid UUID format: UUID must be exactly 15 alphanumeric characters',
-                ['uuid' => ['UUID must be exactly 15 alphanumeric characters']]
+                'Invalid UUID format: UUID must be 15-32 uppercase letters or digits',
+                ['uuid' => ['UUID must be 15-32 uppercase letters or digits']]
             );
         }
     }

@@ -95,7 +95,7 @@ class DocumentDetailsApiTest extends TestCase
             '', // Empty
             'abc', // Too short
             'invalid-uuid-format', // Invalid format
-            'F9D425P6DS7D8IUX', // Too long
+            str_repeat('F', 33), // Too long
             'f9d425p6ds7d8iu', // Lowercase
             'F9D425P6DS7D8I#', // Invalid characters
         ];
@@ -244,7 +244,6 @@ class DocumentDetailsApiTest extends TestCase
             'abc', // Too short
             'invalid-long-id', // Invalid format
             'LIJAF97HJJKH', // Too short
-            'lijaf97hjjkh8298khadh09908570fdkk9s2lsiuhb377373', // Lowercase
             'LIJAF97HJJKH8298KHADH09908570FDKK9S2LSIUHB377373#', // Invalid characters
         ];
 

@@ -128,9 +128,15 @@ class MyInvoisClient
     use IntermediaryApi;
     use TaxpayerApi;
 
-    public const PRODUCTION_URL = 'https://myinvois.hasil.gov.my';
+    // e-Invoice API hosts (same host as the identity service)
+    public const PRODUCTION_URL = Config::PRODUCTION_URL;
 
-    public const SANDBOX_URL = 'https://preprod.myinvois.hasil.gov.my';
+    public const SANDBOX_URL = Config::SANDBOX_URL;
+
+    // Portal hosts, used only for document share/QR links
+    public const PORTAL_PRODUCTION_URL = Config::PORTAL_PRODUCTION_URL;
+
+    public const PORTAL_SANDBOX_URL = Config::PORTAL_SANDBOX_URL;
 
     // Identity base hosts (token path appended by AuthenticationClient)
     public const IDENTITY_PRODUCTION_URL = 'https://api.myinvois.hasil.gov.my';
@@ -139,6 +145,9 @@ class MyInvoisClient
 
     /** General-public TIN used by consolidated e-Invoices. */
     public const CONSOLIDATED_BUYER_TIN = 'EI00000000010';
+
+    /** Classification code of a consolidated e-Invoice line. */
+    public const CONSOLIDATED_CLASSIFICATION_CODE = '004';
 
     /** State code meaning "Not Applicable". */
     public const NOT_APPLICABLE_STATE_CODE = '17';
@@ -218,6 +227,8 @@ class MyInvoisClient
         if (!$resolvedBaseUrl) {
             $resolvedBaseUrl = self::PRODUCTION_URL;
         }
+        // Older configs point at the portal host, which does not serve /api/*.
+        $resolvedBaseUrl = Config::apiBaseUrl($resolvedBaseUrl);
 
         // Prefer injected HTTP client from config if provided
         if (!$resolvedHttpClient && isset($resolvedConfig['httpClient']) && $resolvedConfig['httpClient'] instanceof GuzzleClient) {
@@ -345,9 +356,10 @@ class MyInvoisClient
         if ($code === self::NOT_APPLICABLE_STATE_CODE && !$allowNotApplicable) {
             throw new ValidationException('Invalid state', [
                 $field => [sprintf(
-                    'State code 17 (Not Applicable) received as "%s" is only allowed for consolidated e-Invoices (buyer TIN %s) or non-Malaysian addresses',
+                    'State code 17 (Not Applicable) received as "%s" is only allowed for consolidated e-Invoices (buyer TIN %s and a line with classificationCode %s) or non-Malaysian addresses',
                     $raw,
-                    self::CONSOLIDATED_BUYER_TIN
+                    self::CONSOLIDATED_BUYER_TIN,
+                    self::CONSOLIDATED_CLASSIFICATION_CODE
                 )],
             ]);
         }
@@ -358,9 +370,35 @@ class MyInvoisClient
     /**
      * Get the portal base URL for shareable links.
      */
+    /**
+     * @param  array<int|string, mixed>  $lineItems
+     */
+    private function hasConsolidatedLineItem(array $lineItems): bool
+    {
+        foreach ($lineItems as $item) {
+            if (is_array($item) && trim((string) ($item['classificationCode'] ?? '')) === self::CONSOLIDATED_CLASSIFICATION_CODE) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     protected function getPortalBaseUrl(): string
     {
-        return rtrim($this->config['base_url'] ?? (string) config('myinvois.base_url', self::PRODUCTION_URL), '/');
+        if (!empty($this->config['portal_url'])) {
+            return rtrim((string) $this->config['portal_url'], '/');
+        }
+        try {
+            $configured = config('myinvois.portal_url');
+        } catch (\Throwable $e) {
+            $configured = null;
+        }
+        if (is_string($configured) && $configured !== '') {
+            return rtrim($configured, '/');
+        }
+
+        return Config::portalBaseUrl((string) ($this->config['base_url'] ?? self::PRODUCTION_URL));
     }
 
     public function createDocument(Request $request)
@@ -381,9 +419,11 @@ class MyInvoisClient
         $this->buyerPostcode = $request->input('buyerPostcode');
         $this->buyerCity = $request->input('buyerCity');
         // State code 17 ("Not Applicable") is only accepted by LHDN for consolidated
-        // e-Invoices (buyer TIN EI00000000010) or non-Malaysian parties (30 Apr 2026).
+        // e-Invoices or non-Malaysian parties (30 Apr 2026). Consolidated means buyer TIN
+        // EI00000000010 and classification code 004 (verified against preprod 2026-11-12).
         // Both parties are always MYS in createDocument(), so only the consolidated case applies.
-        $allowNotApplicableState = strtoupper(trim((string) $this->buyerTIN)) === self::CONSOLIDATED_BUYER_TIN;
+        $allowNotApplicableState = strtoupper(trim((string) $this->buyerTIN)) === self::CONSOLIDATED_BUYER_TIN
+            && $this->hasConsolidatedLineItem((array) $request->input('lineItems', []));
         $this->buyerStateCode = $this->resolveStateCode($request->input('buyerState'), 'buyerState', $allowNotApplicableState);
         $this->supplierIdType = $request->input('supplierIdType');
         $this->supplierTIN = $request->input('supplierTIN');

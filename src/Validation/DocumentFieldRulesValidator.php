@@ -29,6 +29,12 @@ class DocumentFieldRulesValidator
 
     private const CONSOLIDATED_BUYER_TIN = 'EI00000000010';
 
+    /** Classification code of a consolidated e-Invoice line. */
+    private const CONSOLIDATED_CLASSIFICATION_CODE = '004';
+
+    /** AdditionalDocumentReference types that are not Incoterms (SDK Invoice v1.1). */
+    private const NON_INCOTERMS_DOCUMENT_TYPES = ['CustomsImportForm', 'FreeTradeAgreement', 'K2'];
+
     private const NOT_APPLICABLE_STATE = '17';
 
     /** Keys whose subtree is not validated. */
@@ -162,10 +168,13 @@ class DocumentFieldRulesValidator
             $this->maxLength($prepaid, 'ID', 150, "{$path}.PrepaidPayment" . self::index($i));
         }
 
-        // Incoterms: max 3. SDK path cac:AdditionalDocumentReference[4]/cbc:ID; in the
-        // official samples it is the reference that carries an ID but no DocumentType.
+        // Incoterms: max 3. LHDN treats every AdditionalDocumentReference whose
+        // DocumentType is not CustomsImportForm / FreeTradeAgreement / K2 (including
+        // a missing or empty one) as Incoterms: verified against preprod 2026-11-12,
+        // where an unknown DocumentType with an 11-character ID failed CF417.
         foreach (self::nodes($invoice, 'AdditionalDocumentReference') as $i => $reference) {
-            if (! isset($reference['DocumentType'])) {
+            $documentType = $reference['DocumentType'][0]['_'] ?? null;
+            if (! in_array($documentType, self::NON_INCOTERMS_DOCUMENT_TYPES, true)) {
                 $this->maxLength($reference, 'ID', 3, "{$path}.AdditionalDocumentReference" . self::index($i), 'Incoterms');
             }
         }
@@ -324,7 +333,7 @@ class DocumentFieldRulesValidator
                     if (! isset(StateCodeValidator::getStates()[$state])) {
                         $this->add($statePath, sprintf('must be a state code 01-17 for Malaysian addresses (got %s)', self::describe($state)));
                     } elseif ($state === self::NOT_APPLICABLE_STATE && ! $consolidated) {
-                        $this->add($statePath, sprintf('state code 17 is only allowed for consolidated e-Invoices (buyer TIN %s) or non-Malaysian addresses', self::CONSOLIDATED_BUYER_TIN));
+                        $this->add($statePath, sprintf('state code 17 is only allowed for consolidated e-Invoices (buyer TIN %s and classification code %s) or non-Malaysian addresses', self::CONSOLIDATED_BUYER_TIN, self::CONSOLIDATED_CLASSIFICATION_CODE));
                     }
                 } else {
                     $this->stringMax($state, 50, $statePath);
@@ -352,11 +361,42 @@ class DocumentFieldRulesValidator
     }
 
     /**
-     * A consolidated e-Invoice has buyer TIN EI00000000010.
+     * A consolidated e-Invoice has buyer TIN EI00000000010 and classification code
+     * 004. Verified against preprod 2026-11-12: buyer EI00000000010 with state 17
+     * and only classification 003 failed CV317; with 004 it passed.
      *
      * @param  array<string, mixed>  $invoice
      */
     private function isConsolidated(array $invoice): bool
+    {
+        return $this->hasGeneralBuyerTin($invoice) && $this->hasConsolidatedClassification($invoice);
+    }
+
+    /**
+     * @param  array<string, mixed>  $invoice
+     */
+    private function hasConsolidatedClassification(array $invoice): bool
+    {
+        foreach (self::nodes($invoice, 'InvoiceLine') as $line) {
+            foreach (self::nodes($line, 'Item') as $item) {
+                foreach (self::nodes($item, 'CommodityClassification') as $classification) {
+                    foreach (self::nodes($classification, 'ItemClassificationCode') as $code) {
+                        if (strtoupper((string) ($code['listID'] ?? '')) === 'CLASS'
+                            && trim((string) ($code['_'] ?? '')) === self::CONSOLIDATED_CLASSIFICATION_CODE) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $invoice
+     */
+    private function hasGeneralBuyerTin(array $invoice): bool
     {
         foreach (self::nodes($invoice, 'AccountingCustomerParty') as $customer) {
             foreach (self::nodes($customer, 'Party') as $party) {

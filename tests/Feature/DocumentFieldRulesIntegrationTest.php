@@ -6,6 +6,7 @@ use GuzzleHttp\Psr7\Response;
 use Nava\MyInvois\Enums\DocumentFormat;
 use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Tests\Support\CreatesDocuments;
+use Nava\MyInvois\Tests\Support\SdkSamples;
 use Nava\MyInvois\Tests\TestCase;
 
 /**
@@ -17,7 +18,7 @@ class DocumentFieldRulesIntegrationTest extends TestCase
 
     private function sampleJson(): string
     {
-        return (string) file_get_contents(__DIR__ . '/../fixtures/sdk/1.1-Invoice-Sample.json');
+        return SdkSamples::json('1.1');
     }
 
     /**

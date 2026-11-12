@@ -4,6 +4,7 @@ namespace Nava\MyInvois\Tests\Unit;
 
 use Nava\MyInvois\Exception\ValidationException;
 use Nava\MyInvois\Validation\DocumentFieldRulesValidator;
+use Nava\MyInvois\Tests\Support\SdkSamples;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -21,7 +22,7 @@ class DocumentFieldRulesValidatorTest extends TestCase
     /** @return array<string, mixed> */
     private static function sample(string $version = '1.1'): array
     {
-        return json_decode((string) file_get_contents(__DIR__ . "/../fixtures/sdk/{$version}-Invoice-Sample.json"), true);
+        return SdkSamples::document($version);
     }
 
     /**
@@ -47,11 +48,58 @@ class DocumentFieldRulesValidatorTest extends TestCase
      * @dataProvider sampleProvider
      */
     #[\PHPUnit\Framework\Attributes\DataProvider('sampleProvider')]
-    public function test_official_sdk_samples_have_no_violations(string $version): void
+    public function test_official_sdk_samples_have_no_violations_once_the_placeholder_reference_is_typed(string $version): void
     {
-        $json = (string) file_get_contents(__DIR__ . "/../fixtures/sdk/{$version}-Invoice-Sample.json");
+        $this->assertSame([], (new DocumentFieldRulesValidator())->getViolations(SdkSamples::json($version)));
+    }
 
-        $this->assertSame([], (new DocumentFieldRulesValidator())->getViolations($json));
+    /**
+     * The raw official samples are rejected by LHDN preprod with CF417 (Incoterms
+     * max 3) because of a placeholder reference with an unknown DocumentType.
+     *
+     * @dataProvider sampleProvider
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('sampleProvider')]
+    public function test_raw_official_samples_fail_incoterms_like_lhdn(string $version): void
+    {
+        $violations = (new DocumentFieldRulesValidator())->getViolations(SdkSamples::raw($version));
+
+        $this->assertSame(['Invoice.AdditionalDocumentReference[1].ID'], array_keys($violations));
+        $this->assertStringContainsString('Incoterms', $violations['Invoice.AdditionalDocumentReference[1].ID'][0]);
+    }
+
+    /**
+     * @return array<string, array{?string, bool}>
+     */
+    public static function referenceTypeProvider(): array
+    {
+        return [
+            'CustomsImportForm' => ['CustomsImportForm', false],
+            'FreeTradeAgreement' => ['FreeTradeAgreement', false],
+            'K2' => ['K2', false],
+            'no DocumentType' => [null, true],
+            'empty DocumentType' => ['', true],
+            'unknown DocumentType' => ['Other', true],
+        ];
+    }
+
+    /**
+     * @dataProvider referenceTypeProvider
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('referenceTypeProvider')]
+    public function test_incoterms_limit_applies_to_every_reference_type_except_customs_and_fta(?string $type, bool $limited): void
+    {
+        $violations = $this->violationsAfter(static function (array $d) use ($type): array {
+            $reference = ['ID' => [['_' => 'LONGER-THAN-3']]];
+            if ($type !== null) {
+                $reference['DocumentType'] = [['_' => $type]];
+            }
+            $d['Invoice'][0]['AdditionalDocumentReference'][] = $reference;
+
+            return $d;
+        });
+
+        $this->assertSame($limited ? ['Invoice.AdditionalDocumentReference[4].ID'] : [], array_keys($violations));
     }
 
     /**
@@ -134,17 +182,42 @@ class DocumentFieldRulesValidatorTest extends TestCase
         $this->assertCount(1, $violations, 'Only the mutated field should fail. Got: ' . json_encode($violations));
     }
 
-    public function test_state_17_is_allowed_for_consolidated_buyer(): void
+    /**
+     * Matches LHDN preprod (2026-11-12): general buyer TIN + classification 003 got
+     * CV317; with classification 004 state 17 was accepted.
+     *
+     * @return array<string, array{string, string, bool}>
+     */
+    public static function consolidatedProvider(): array
     {
-        $violations = $this->violationsAfter(static function (array $d): array {
+        return [
+            'general TIN + 004' => ['EI00000000010', '004', true],
+            'general TIN without 004' => ['EI00000000010', '003', false],
+            '004 without general TIN' => ['IG12345678901', '004', false],
+        ];
+    }
+
+    /**
+     * @dataProvider consolidatedProvider
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('consolidatedProvider')]
+    public function test_state_17_needs_general_buyer_tin_and_classification_004(string $tin, string $class, bool $allowed): void
+    {
+        $violations = $this->violationsAfter(static function (array $d) use ($tin, $class): array {
             $party = &$d['Invoice'][0]['AccountingCustomerParty'][0]['Party'][0];
-            $party['PartyIdentification'][0]['ID'][0]['_'] = 'EI00000000010';
+            $party['PartyIdentification'][0]['ID'][0]['_'] = $tin;
             $party['PostalAddress'][0]['CountrySubentityCode'][0]['_'] = '17';
+            unset($party);
+            foreach ($d['Invoice'][0]['InvoiceLine'][0]['Item'][0]['CommodityClassification'] as &$classification) {
+                if ($classification['ItemClassificationCode'][0]['listID'] === 'CLASS') {
+                    $classification['ItemClassificationCode'][0]['_'] = $class;
+                }
+            }
 
             return $d;
         });
 
-        $this->assertSame([], $violations);
+        $this->assertSame($allowed ? [] : [self::CUSTOMER . '.PostalAddress.CountrySubentityCode'], array_keys($violations));
     }
 
     public function test_non_malaysian_address_allows_state_name_and_long_postcode_up_to_50(): void

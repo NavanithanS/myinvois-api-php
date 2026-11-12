@@ -40,7 +40,8 @@ trait DocumentSubmissionApi
      * @param  array[]  $documents  Array of document data following MyInvois schema
      * @param  string  $format  Format of the documents (JSON or XML)
      * @return array{
-     *     submissionUID: string,
+     *     submissionUid: ?string,
+     *     submissionUID: ?string,
      *     acceptedDocuments: array<array{uuid: string, invoiceCodeNumber: string}>,
      *     rejectedDocuments: array<array{invoiceCodeNumber: string, error: array}>
      * }
@@ -76,6 +77,7 @@ trait DocumentSubmissionApi
                     'timeout' => 30,
                 ]);
 
+                $response = $this->normalizeSubmissionResponse($response);
                 $this->logSubmissionResults($response);
 
                 return $response;
@@ -455,13 +457,36 @@ trait DocumentSubmissionApi
     }
 
     /**
+     * LHDN returns "submissionUid" (null when every document is rejected); older
+     * versions of this library documented "submissionUID". Expose both keys and
+     * default the document lists so a 202 is never reported as a failure.
+     *
+     * @param  array<string, mixed>  $response
+     * @return array
+     *
+     * @throws ApiException If the body is not a submission response at all
+     */
+    private function normalizeSubmissionResponse(array $response): array
+    {
+        if (! array_key_exists('submissionUid', $response) && ! array_key_exists('submissionUID', $response)
+            && ! isset($response['acceptedDocuments']) && ! isset($response['rejectedDocuments'])) {
+            throw new ApiException('Invalid response format from submission endpoint');
+        }
+
+        $uid = $response['submissionUid'] ?? $response['submissionUID'] ?? null;
+        $response['submissionUid'] = $uid;
+        $response['submissionUID'] = $uid;
+        $response['acceptedDocuments'] = is_array($response['acceptedDocuments'] ?? null) ? $response['acceptedDocuments'] : [];
+        $response['rejectedDocuments'] = is_array($response['rejectedDocuments'] ?? null) ? $response['rejectedDocuments'] : [];
+
+        return $response;
+    }
+
+    /**
      * Log submission results.
      */
     private function logSubmissionResults(array $response): void
     {
-        if (! isset($response['submissionUID']) || ! isset($response['acceptedDocuments']) || ! isset($response['rejectedDocuments'])) {
-            throw new ApiException('Invalid response format from submission endpoint');
-        }
         $acceptedCount = count($response['acceptedDocuments'] ?? []);
         $rejectedCount = count($response['rejectedDocuments'] ?? []);
 

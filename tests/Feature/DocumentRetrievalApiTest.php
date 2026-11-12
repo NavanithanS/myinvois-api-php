@@ -89,7 +89,7 @@ class DocumentRetrievalApiTest extends TestCase
         $invalidUuids = [
             '', // Empty
             'abc', // Too short
-            '123456789012345678901', // Too long
+            str_repeat('A', 33), // Too long (LHDN UUIDs are 26; 15-32 accepted)
             'F9D425P6DS7D8I!', // Invalid characters
             'f9d425p6ds7d8iu', // Lowercase
         ];
@@ -100,7 +100,7 @@ class DocumentRetrievalApiTest extends TestCase
                 $this->fail('Expected ValidationException for invalid UUID: '.$uuid);
             } catch (ValidationException $e) {
                 $this->assertStringContainsString(
-                    'UUID must be exactly 15 alphanumeric characters',
+                    'UUID must be 15-32 uppercase letters or digits',
                     $e->getMessage()
                 );
             }
@@ -189,8 +189,22 @@ class DocumentRetrievalApiTest extends TestCase
 
         $url = $this->client->getDocumentShareableUrl($uuid, $longId);
 
-        $expectedUrl = MyInvoisClient::SANDBOX_URL."/{$uuid}/share/{$longId}";
+        // Share links use the portal host, not the API host
+        $expectedUrl = MyInvoisClient::PORTAL_SANDBOX_URL."/{$uuid}/share/{$longId}";
         $this->assertEquals($expectedUrl, $url);
+    }
+
+    /** @test */
+    public function it_accepts_real_lhdn_uuid_and_long_id_formats(): void
+    {
+        // Captured from preprod on 2026-11-12: 26-char UUID, long ID with lowercase letters
+        $uuid = 'A284SAC7CQ8Y5EDXAF3QG67M10';
+        $longId = '848K10159P2R8V5WAF3QG67M10mbBOzD1794441448';
+
+        $this->assertSame(
+            'https://preprod.myinvois.hasil.gov.my/'.$uuid.'/share/'.$longId,
+            $this->client->getDocumentShareableUrl($uuid, $longId)
+        );
     }
 
     /** @test */

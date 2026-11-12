@@ -126,11 +126,11 @@ trait DocumentDetailsApi
         $this->validateUuid($uuid);
 
         // Validate long ID format (at least 40 uppercase alphanumeric characters, allow spaces)
-        if (! is_string($longId) || ! preg_match('/^[A-Z0-9\s]{40,}$/', $longId)) {
+        if (! is_string($longId) || ! preg_match('/^[A-Za-z0-9\s]{40,}$/', $longId)) {
             throw new ValidationException('Invalid long ID format');
         }
 
-        $baseUrl = rtrim($this->config['base_url'] ?? (string) config('myinvois.base_url', \Nava\MyInvois\MyInvoisClient::PRODUCTION_URL), '/');
+        $baseUrl = $this->getPortalBaseUrl();
 
         return "{$baseUrl}/{$uuid}/share/{$longId}";
     }

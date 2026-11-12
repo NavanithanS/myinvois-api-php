@@ -102,11 +102,11 @@ trait DocumentRetrievalApi
     public function getDocumentShareableUrl(string $uuid, string $longId): string
     {
         $this->validateUuid($uuid);
-        if (! is_string($longId) || ! preg_match('/^[A-Z0-9\s]{40,}$/', $longId)) {
+        if (! is_string($longId) || ! preg_match('/^[A-Za-z0-9\s]{40,}$/', $longId)) {
             throw new ValidationException('Invalid long ID format');
         }
 
-        $baseUrl = rtrim($this->config['base_url'] ?? (string) config('myinvois.base_url', \Nava\MyInvois\MyInvoisClient::PRODUCTION_URL), '/');
+        $baseUrl = $this->getPortalBaseUrl();
 
         return "{$baseUrl}/{$uuid}/share/{$longId}";
     }

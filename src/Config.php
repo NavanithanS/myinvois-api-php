@@ -4,14 +4,51 @@ namespace Nava\MyInvois;
 
 class Config
 {
-    // API URLs
+    // API URLs. The e-Invoice API and the identity service share the *-api host
+    // (verified against preprod 2026-11-12: the portal hosts return 404 for /api/*).
     public const IDENTITY_PRODUCTION_URL = 'https://api.myinvois.hasil.gov.my';
 
     public const IDENTITY_SANDBOX_URL = 'https://preprod-api.myinvois.hasil.gov.my';
 
-    public const PRODUCTION_URL = 'https://myinvois.hasil.gov.my';
+    public const PRODUCTION_URL = 'https://api.myinvois.hasil.gov.my';
 
-    public const SANDBOX_URL = 'https://preprod.myinvois.hasil.gov.my';
+    public const SANDBOX_URL = 'https://preprod-api.myinvois.hasil.gov.my';
+
+    // MyInvois portal hosts, used only for document share/QR links.
+    public const PORTAL_PRODUCTION_URL = 'https://myinvois.hasil.gov.my';
+
+    public const PORTAL_SANDBOX_URL = 'https://preprod.myinvois.hasil.gov.my';
+
+    /**
+     * API base URL for a configured base URL. The portal hosts (which older
+     * versions used and documented as the base URL) are mapped to their API host;
+     * anything else is returned unchanged.
+     */
+    public static function apiBaseUrl(string $baseUrl): string
+    {
+        $baseUrl = rtrim($baseUrl, '/');
+        $map = [
+            self::PORTAL_PRODUCTION_URL => self::PRODUCTION_URL,
+            self::PORTAL_SANDBOX_URL => self::SANDBOX_URL,
+        ];
+
+        return $map[strtolower($baseUrl)] ?? $baseUrl;
+    }
+
+    /**
+     * Portal base URL for share/QR links: the API hosts map to their portal host;
+     * anything else (e.g. an explicit portal URL) is returned unchanged.
+     */
+    public static function portalBaseUrl(string $baseUrl): string
+    {
+        $baseUrl = rtrim($baseUrl, '/');
+        $map = [
+            self::PRODUCTION_URL => self::PORTAL_PRODUCTION_URL,
+            self::SANDBOX_URL => self::PORTAL_SANDBOX_URL,
+        ];
+
+        return $map[strtolower($baseUrl)] ?? $baseUrl;
+    }
 
     // Version constants
     public const INVOICE_CURRENT_VERSION = '1.1'; // Updated to latest version

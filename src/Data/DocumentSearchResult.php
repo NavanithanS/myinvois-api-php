@@ -74,6 +74,66 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
     public $buyerTIN;
 
     /**
+     * Build from one row of the real GET /api/v1.0/documents/search response
+     * (verified against preprod 2026-11-12). LHDN uses submissionUid, issuerTIN,
+     * totalExcludingTax / totalNetAmount / totalPayableAmount and any TIN prefix
+     * (C, IG, EI, ...), so this does not apply fromArray()'s legacy checks.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    public static function fromApi(array $row): self
+    {
+        foreach (['uuid', 'status', 'dateTimeIssued', 'dateTimeReceived'] as $field) {
+            Assert::keyExists($row, $field, sprintf('%s is required', $field));
+        }
+
+        $date = static function ($value): ?DateTimeImmutable {
+            return is_string($value) && $value !== '' ? new DateTimeImmutable($value) : null;
+        };
+        $amount = static function (...$values): float {
+            foreach ($values as $value) {
+                if (is_numeric($value)) {
+                    return (float) $value;
+                }
+            }
+
+            return 0.0;
+        };
+
+        return new self([
+            'uuid' => $row['uuid'],
+            'submissionUID' => $row['submissionUid'] ?? $row['submissionUID'] ?? null,
+            'longId' => $row['longId'] ?? null,
+            'internalId' => $row['internalId'] ?? null,
+            'typeName' => $row['typeName'] ?? null,
+            'typeVersionName' => $row['typeVersionName'] ?? null,
+            'issuerTin' => $row['issuerTIN'] ?? $row['issuerTin'] ?? $row['supplierTIN'] ?? null,
+            'issuerName' => $row['issuerName'] ?? $row['supplierName'] ?? null,
+            'receiverId' => $row['receiverID'] ?? $row['receiverId'] ?? null,
+            'receiverName' => $row['receiverName'] ?? null,
+            'dateTimeIssued' => new DateTimeImmutable($row['dateTimeIssued']),
+            'dateTimeReceived' => new DateTimeImmutable($row['dateTimeReceived']),
+            'dateTimeValidated' => $date($row['dateTimeValidated'] ?? null),
+            'totalSales' => $amount($row['totalExcludingTax'] ?? null, $row['totalSales'] ?? null),
+            'totalDiscount' => $amount($row['totalDiscount'] ?? null),
+            'netAmount' => $amount($row['totalNetAmount'] ?? null, $row['netAmount'] ?? null),
+            'total' => $amount($row['totalPayableAmount'] ?? null, $row['total'] ?? null),
+            'status' => $row['status'],
+            'cancelDateTime' => $date($row['cancelDateTime'] ?? null),
+            'rejectRequestDateTime' => $date($row['rejectRequestDateTime'] ?? null),
+            'documentStatusReason' => $row['documentStatusReason'] ?? null,
+            'createdByUserId' => $row['createdByUserId'] ?? null,
+            'supplierTIN' => $row['supplierTIN'] ?? null,
+            'supplierName' => $row['supplierName'] ?? null,
+            'submissionChannel' => $row['submissionChannel'] ?? null,
+            'intermediaryName' => $row['intermediaryName'] ?? null,
+            'intermediaryTIN' => $row['intermediaryTIN'] ?? null,
+            'buyerName' => $row['buyerName'] ?? null,
+            'buyerTIN' => $row['buyerTIN'] ?? $row['receiverTIN'] ?? null,
+        ]);
+    }
+
+    /**
      * Create a new DocumentSearchResult instance from an array.
      *
      * @param  array  $data  Raw data from API
@@ -262,7 +322,7 @@ class DocumentSearchResult extends DataTransferObject implements JsonSerializabl
             'receiverName' => $this->receiverName,
             'dateTimeIssued' => $this->dateTimeIssued->format(DateTimeInterface::ATOM),
             'dateTimeReceived' => $this->dateTimeReceived->format(DateTimeInterface::ATOM),
-            'dateTimeValidated' => $this->dateTimeValidated->format(DateTimeInterface::ATOM),
+            'dateTimeValidated' => $this->dateTimeValidated?->format(DateTimeInterface::ATOM),
             'totalSales' => $this->totalSales,
             'totalDiscount' => $this->totalDiscount,
             'netAmount' => $this->netAmount,
